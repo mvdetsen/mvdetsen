@@ -17,6 +17,7 @@ Test.class: Test.java
 	
 test: all Test.class
 	java -cp build:$(bcel_jar) com.brian_web.gcclass.GCClass . stripped Test.main
+	java -cp stripped Test
 
 $(bcel_jar):
 	mkdir -p upstream

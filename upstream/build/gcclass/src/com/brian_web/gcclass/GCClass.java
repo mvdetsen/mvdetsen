@@ -19,8 +19,6 @@ import org.apache.bcel.util.*;
 import org.apache.bcel.generic.*;
 import org.apache.bcel.classfile.*;
 
-// FEATURE: Rebuild each method with a new constant pool to eliminate extra constant pool entries
-
 public class GCClass {
     private static final String[] PRE_REF = {
         "java.lang.Thread.run",
@@ -297,30 +295,53 @@ public class GCClass {
     }
     
     private void dumpClass(JavaClass c, Hashtable refs, boolean staticOnly, File file) throws IOException {
-        ClassGen cg = new ClassGen(c);
-        Method[] methods= c.getMethods();
+        ClassGen oldCG = new ClassGen(c);
+        ConstantPoolGen oldCP = oldCG.getConstantPool();
+        
+        ConstantPoolGen cp = new ConstantPoolGen();
+        ClassGen cg = new ClassGen(c.getClassName(),c.getSuperclassName(),c.getSourceFileName(),c.getAccessFlags(),c.getInterfaceNames(),cp);
+        
+        Method[] methods= oldCG.getMethods();
         for(int i=0;i<methods.length;i++) {
             Method m = methods[i];
             MethodRef mr = new MethodRef(c,m);
             if((staticOnly && !m.isStatic()) || refs.get(mr) == null) {
                 System.err.println("Removing method " + mr);
-                if(false) {
-                    cg.removeMethod(m);
-                } else {
+                if(true) {
                     InstructionFactory fac = new InstructionFactory(cg,cg.getConstantPool());
                     InstructionList il = new InstructionList();
-                    MethodGen mg = new MethodGen(m.getAccessFlags(),m.getReturnType(),m.getArgumentTypes(),null,m.getName(),c.getClassName(),il,cg.getConstantPool());
+                    MethodGen mg = new MethodGen(m.getAccessFlags(),m.getReturnType(),m.getArgumentTypes(),null,m.getName(),c.getClassName(),il,cp);
                     il.append(fac.createNew("java.lang.UnsatisfiedLinkError"));
                     il.append(InstructionConstants.DUP);
-                    il.append(new PUSH(cg.getConstantPool(),"" + mr + " has been pruned"));
-                    il.append(fac.createInvoke("java.lang.UnsatisfiedLinkError","<init>",Type.VOID, new Type[]{Type.STRING},Constants.INVOKESPECIAL));
+                    if(false) {
+                        il.append(new PUSH(cg.getConstantPool(),"" + mr + " has been pruned"));
+                        il.append(fac.createInvoke("java.lang.UnsatisfiedLinkError","<init>",Type.VOID, new Type[]{Type.STRING},Constants.INVOKESPECIAL));
+                    } else {
+                        il.append(fac.createInvoke("java.lang.UnsatisfiedLinkError","<init>",Type.VOID,Type.NO_ARGS,Constants.INVOKESPECIAL));
+                    }
                     il.append(InstructionConstants.ATHROW);
                     mg.setMaxStack();
                     mg.setMaxLocals();
-                    cg.replaceMethod(m,mg.getMethod());
+                    cg.addMethod(mg.getMethod());
                 }
-            } else {
-                //System.err.println("Keeping method " + mr);
+            } else {                
+                MethodGen mg = new MethodGen(m,cg.getClassName(),oldCP);
+                mg.setConstantPool(cp);
+                if(mg.getInstructionList() != null) mg.getInstructionList().replaceConstantPool(oldCP, cp);
+                
+                Attribute[] attrs = m.getAttributes();
+                for(int j=0;j<attrs.length;j++) {
+                    Attribute a = attrs[j];
+                    if(a instanceof Code || a instanceof ExceptionTable) continue;
+                    mg.removeAttribute(a);
+                    Constant con = oldCP.getConstant(a.getNameIndex());
+                    a.setNameIndex(cp.addConstant(con,oldCP));
+                    mg.addAttribute(a);                    
+                }
+                
+                mg.removeLineNumbers();
+                mg.removeLocalVariables();
+                cg.addMethod(mg.getMethod());
             }
         }
         
@@ -330,9 +351,31 @@ public class GCClass {
             FieldRef fr = new FieldRef(c,f);
             if(refs.get(fr) == null) {
                 System.err.println("Removing field " + fr);
-                cg.removeField(f);
             } else {
                 //System.err.println("Keeping field " + fr);
+                FieldGen fg = new FieldGen(f.getAccessFlags(),f.getType(),f.getName(),cp);
+                Attribute[] attrs = f.getAttributes();
+                for(int j=0;j<attrs.length;j++) {
+                    if(attrs[j] instanceof ConstantValue) {
+                        ConstantObject co = (ConstantObject) oldCP.getConstant(((ConstantValue)attrs[i]).getConstantValueIndex());
+                        Object o = co.getConstantValue(oldCP.getConstantPool());
+                        if(co instanceof ConstantLong) fg.setInitValue(((Number)o).longValue());
+                        else if(co instanceof ConstantInteger) fg.setInitValue(((Number)o).intValue());
+                        else if(co instanceof ConstantFloat) fg.setInitValue(((Number)o).floatValue());
+                        else if(co instanceof ConstantDouble) fg.setInitValue(((Number)o).floatValue());
+                        else if(co instanceof ConstantString) fg.setInitValue((String)o);
+                        else throw new Error("should never happen");
+                    } else {
+                        Attribute a = attrs[j];
+                        Constant con = oldCP.getConstant(a.getNameIndex());
+                        a.setNameIndex(cp.addConstant(con,oldCP));
+                        //System.err.println("Adding attribute: " + attrs[j]);
+                        fg.addAttribute(a);
+                    }
+                }
+                /*if(f.getConstantValue() != null) throw new Error("this might be broken");
+                FieldGen fg = new FieldGen(f.getAccessFlags(),f.getType(),f.getName(),cp);*/
+                cg.addField(fg.getField());
             }
         }
         
