@@ -150,12 +150,6 @@ tasks/build_regex: tasks/download_regex tasks/build_newlib
 # to build or run mips2java
 #
 
-tasks/build_freetype: tasks/full_toolchain
-tasks/build_libjpeg: tasks/full_toolchain
-tasks/build_boehmgc: tasks/full_toolchain
-tasks/build_libmspack: tasks/full_toolchain
-tasks/build_freetype: tasks/full_toolchain
-
 version_libjpeg = 6b
 url_libjpeg = http://www.ijg.org/files/jpegsrc.v$(version_libjpeg).tar.gz
 
@@ -184,7 +178,7 @@ tasks/extract_libjpeg: tasks/download_libjpeg
 		ln -s libjpeg-$(version_libjpeg)  libjpeg
 	touch $@    
 
-tasks/build_libjpeg: tasks/patch_libjpeg
+tasks/build_libjpeg: tasks/patch_libjpeg tasks/build_libc
 	cd build/libjpeg-$(version_libjpeg) && \
 		./configure && \
 		make CC="mips-unknown-elf-gcc" \
@@ -194,7 +188,7 @@ tasks/build_libjpeg: tasks/patch_libjpeg
 			LDFLAGS="$(MIPS_LDFLAGS)"
 	touch $@    
 
-tasks/extract_libmspack: tasks/download_libmspack
+tasks/extract_libmspack: tasks/download_libmspack tasks/build_libc
 	mkdir -p build
 	cd build && \
 		gzip -dc ../download/libmspack-$(version_libmspack).tar.gz | tar xf - && \
@@ -203,7 +197,7 @@ tasks/extract_libmspack: tasks/download_libmspack
 		ln -s libmspack-$(version_libmspack)  libmspack
 	touch $@    
 
-tasks/build_libmspack: tasks/patch_libmspack tasks/full_toolchain
+tasks/build_libmspack: tasks/patch_libmspack tasks/build_libc
 	cd build/libmspack-$(version_libmspack)/mspack && \
 		make CC="mips-unknown-elf-gcc" \
 			AR="mips-unknown-elf-ar" \
@@ -211,7 +205,7 @@ tasks/build_libmspack: tasks/patch_libmspack tasks/full_toolchain
 			OPTIM="$(MIPS_CFLAGS)"
 	touch $@    
 
-tasks/build_freetype: tasks/patch_freetype tasks/full_toolchain
+tasks/build_freetype: tasks/patch_freetype tasks/build_libc
 	cd build/freetype-$(version_freetype) && \
 		$(MAKE) setup ansi && \
 		$(MAKE) CC="mips-unknown-elf-gcc" \
@@ -231,7 +225,7 @@ tasks/extract_boehmgc: tasks/download_boehmgc
 		ln -s gc$(version_boehmgc)  boehmgc-$(version_boehmgc)
 	touch $@
 
-tasks/build_boehmgc: tasks/patch_boehmgc tasks/full_toolchain
+tasks/build_boehmgc: tasks/patch_boehmgc tasks/build_libc
 	cd build/gc$(version_boehmgc) && \
 		CC="mips-unknown-elf-gcc" CFLAGS="$(MIPS_CFLAGS)" LDFLAGS="$(MIPS_LDFLAGS)" \
 		./configure --host=mips-unknown-elf --disable-shared --disable-threads && \
@@ -239,7 +233,7 @@ tasks/build_boehmgc: tasks/patch_boehmgc tasks/full_toolchain
 		make gctest 
 	touch $@
 
-tasks/build_busybox: tasks/patch_busybox tasks/full_toolchain
+tasks/build_busybox: tasks/patch_busybox tasks/build_libc
 	cd build && \
 		rm -f busybox && \
 		ln -s busybox-$(version_busybox) busybox
