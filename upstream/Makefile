@@ -2,6 +2,7 @@
 
 version_gcc = 3.3
 version_gpc = 20030830
+version_texinputs = 1.0
 url_gcc-core = http://mirrors.rcn.net/pub/sourceware/gcc/releases/gcc-$(version_gcc)/gcc-core-$(version_gcc).tar.gz
 url_gcc-c++ = http://mirrors.rcn.net/pub/sourceware/gcc/releases/gcc-$(version_gcc)/gcc-g++-$(version_gcc).tar.gz
 patches_gcc = gcc-fixes.patch gcc-fdata-sections-bss.patch
@@ -77,36 +78,49 @@ clean_%:
 	rm -rf "build/$(*)"*
 	rm -f "tasks/build_$*" "tasks/patch_$*" "tasks/extract_$*"
 
-tasks/download_tex: ; touch $@
-tasks/extract_tex:
-	mkdir -p build/tex
-	cd build/tex; wget -N http://www.math.uni.wroc.pl/~hebisch/tex_p/tex.web
-#	cd build/tex; wget -N http://www.math.uni.wroc.pl/~hebisch/tex_p/tex.ch
-	cd build/tex; wget -N http://www.tug.org/tex-archive/systems/knuth/local/tex/initex.ch && mv initex.ch tex.ch
-	cd build/tex; wget -N http://www.gnu-pascal.de/crystal/gpc/en/attachments/5593/tangle.p.gz && gunzip tangle.p.gz
-	touch $@
 
 gpc := $(usr)/bin/mips-unknown-elf-gpc
 gpc_flags := --big-endian -w -lgpc -lc $(usr)/mips-unknown-elf/lib/support*.o
 gpc_flags += -Wl,-T,$(usr)/mips-unknown-elf/lib/linker.ld
 
 # FIXME ugly path hacks evil bad
-nestedvm := java -cp $(usr)/../build/bcel/bcel-5.1.jar:$(usr)/../../nestedvm.jar org.ibex.nestedvm.Compiler -outformat class
+nestedvm := java -cp $(usr)/../build/bcel/bcel-5.1.jar:$(usr)/../../build org.ibex.nestedvm.Compiler -outformat class
 
-tasks/build_tex: tasks/full_toolchain tasks/extract_tex
+tasks/download_tex:  ; mkdir -p build/tex; touch $@
+build/tex/tex.web:   ; curl -o $@ http://www.math.uni.wroc.pl/~hebisch/tex_p/tex.web
+build/dtex/tangle.p: ; curl http://www.gnu-pascal.de/crystal/gpc/en/attachments/5593/tangle.p.gz | zcat > $@
+tasks/extract_tex:     build/tex/tex.web build/tex/tangle.p; touch $@
+
+build/tex/tangle.mips:  build/tex/tangle.p tasks/full_toolchain tasks/extract_tex tasks/build_gcc_step2
 	cd build/tex; $(gpc) tangle.p $(gpc_flags) -o tangle.mips
-	cd build/tex; $(nestedvm) -o unixruntime -outfile Tangle.class Tangle tangle.mips
-	cd build/tex; java -cp .:$(usr)/../../nestedvm.jar Tangle \
-			--gpc-rts=-nPascalfile:tex.unpatched.p    \
+build/tex/Tangle.class: build/tex/tangle.mips
+	$(nestedvm) -o unixruntime -outfile $@ Tangle $<
+build/tex/tex.p: build/tex/tex.web build/tex/tex.ch build/tex/Tangle.class
+	rm -f build/tex/tex.p build/tex/tex.pool
+	cd build/tex; java -cp .:$(usr)/../../build Tangle        \
+			--gpc-rts=-nPascalfile:tex.p              \
 			--gpc-rts=-npool:tex.pool                 \
 			--gpc-rts=-nwebfile:tex.web               \
 			--gpc-rts=-nchangefile:tex.ch
-	cd build/tex; cat tex.unpatched.p | sed s_STANDARDTEXT_TEXT_ | sed 's_\\^DIV_\\^ DIV_g' > tex.p
-	cd build/tex; PATH=$$PATH:../../install/bin; $(gpc) tex.p $(gpc_flags) -o tex.mips
+build/tex/tex.mips:  build/tex/tex.p tasks/full_toolchain tasks/build_gcc_step2
+	cd build/tex; $(gpc) tex.p $(gpc_flags) -o tex.mips
+tasks/build_tex: build/tex/tex.mips
 	cd build/tex; $(nestedvm) -o unixruntime -outfile TeX.class TeX tex.mips
-	#ln -s tex.pool 'TeXformats:TEX.POOL                     '
-	#ln -s trip.tfm 'TeXfonts:trip.tfm                       '
-	#ln -s trip.tex 'trip.tex                                '
+	touch $@ 
+tasks/extract_texinputs: tasks/build_tex tasks/download_texinputs
+	cd build/tex; tar xvzf ../../download/texinputs-1.0.tgz
+	touch $@
+
+tasks/extract_linpack: tasks/download_linpack ; touch $@
+tasks/download_linpack:
+	mkdir -p build/linpack
+	cd build/linpack; wget -N http://www.math.iastate.edu/burkardt/f_src/linpack_bench/linpack_bench.f
+	touch $@
+
+tasks/build_linpack: tasks/full_toolchain tasks/extract_linpack
+	cd build/linpack; $(g77) linpack_bench.f $(g77_flags) -o linpack.mips
+	cd build/linpack; $(nestedvm) -o unixruntime -outfile Linpack.class Linpack linpack.mips
+	touch $@
 
 tasks/download_%:
 	if [ -z "$(url_$*)" ]; then echo "No url for $*" >&2; false; fi
