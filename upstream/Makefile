@@ -3,9 +3,10 @@
 version_gcc = 3.3.3
 url_gcc-core = http://mirrors.rcn.net/pub/sourceware/gcc/releases/gcc-$(version_gcc)/gcc-core-$(version_gcc).tar.gz
 url_gcc-c++ = http://mirrors.rcn.net/pub/sourceware/gcc/releases/gcc-$(version_gcc)/gcc-g++-$(version_gcc).tar.gz
+url_gcc-g77 = http://mirrors.rcn.net/pub/sourceware/gcc/releases/gcc-$(version_gcc)/gcc-g77-$(version_gcc).tar.gz
 patches_gcc = gcc-fixes.patch gcc-fdata-sections-bss.patch
 configure_gcc = --target=mips-unknown-elf --disable-threads --with-gnu-ld --with-gnu-as --with-newlib=yes --enable-sjlj-exceptions --enable-languages="c"
-configure_gcc_step2 = $(configure_gcc) --enable-languages="c,c++"
+configure_gcc_step2 = $(configure_gcc) --enable-languages="c,c++,f77"
 
 version_binutils = 2.14
 url_binutils = ftp://ftp.gnu.org/gnu/binutils/binutils-$(version_binutils).tar.gz
@@ -22,6 +23,8 @@ url_regex = ftp://ftp.zoo.toronto.edu/pub/regex.shar
 
 version_bcel = 5.1
 url_bcel = http://mirrors.mix5.com/apache/jakarta/bcel/binaries/bcel-$(version_bcel).tar.gz
+
+url_linpack = http://www.math.iastate.edu/burkardt/f_src/linpack_bench/linpack_bench.f
 
 .SECONDARY: # This is broken in gmake < 3.79.1
 
@@ -71,7 +74,7 @@ tasks/download_%:
 	cd download && wget --passive-ftp -N $(url_$*)
 	touch $@
 
-tasks/download_gcc: tasks/download_gcc-core tasks/download_gcc-c++
+tasks/download_gcc: tasks/download_gcc-core tasks/download_gcc-c++ tasks/download_gcc-g77
 	touch $@
 
 tasks/extract_%: tasks/download_%
@@ -86,6 +89,7 @@ tasks/extract_gcc: tasks/download_gcc
 	mkdir -p build
 	cd build && gzip -dc ../download/gcc-core-$(version_gcc).tar.gz | tar xf -
 	cd build && gzip -dc ../download/gcc-g++-$(version_gcc).tar.gz | tar xf -
+	cd build && gzip -dc ../download/gcc-g77-$(version_gcc).tar.gz | tar xf -
 	touch $@
 
 tasks/patch_%: tasks/extract_%

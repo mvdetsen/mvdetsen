@@ -21,6 +21,7 @@ tasks = upstream/tasks
 flags = -march=mips1
 MIPS_CC = mips-unknown-elf-gcc
 MIPS_CXX = mips-unknown-elf-g++
+MIPS_G77 = mips-unknown-elf-g77
 
 # Be VERY careful about changing any of these as they can break binary 
 # compatibility and create hard to find bugs
@@ -224,6 +225,7 @@ rebuild-constants: $(tasks)/build_newlib
 build/tests/Env.class: build/org/ibex/nestedvm/Runtime.class build/org/ibex/nestedvm/Interpreter.class
 
 # Generic Hello Worldish test
+test_COMPILERFLAGS = -o unixruntime
 test: build/tests/Test.class
 	$(JAVA) -cp build tests.Test "arg 1" "arg 2" "arg 3"
 inttest: build/tests/Test.mips build/org/ibex/nestedvm/Interpreter.class
@@ -252,7 +254,16 @@ Paranoia_CFLAGS = "-Wno-error"
 Paranoia_LDFLAGS = -lm
 paranoiatest: build/tests/Paranoia.class
 	$(JAVA) -cp build tests.Paranoia
-	
+
+
+# Linpack
+build/tests/Linpack.mips: $(tasks)/download_linpack
+	mkdir -p `dirname "$@"`
+	$(MIPS_G77) $(MIPS_CFLAGS) $(MIPS_LDFLAGS) -o $@ upstream/download/linpack_bench.f -lc
+
+linpacktest: build/tests/Linpack.class
+	$(JAVA) -cp build tests.Linpack
+
 #
 # Freetype Stuff
 #
