@@ -20,7 +20,6 @@ import org.apache.bcel.generic.*;
 import org.apache.bcel.classfile.*;
 
 // FEATURE: Rebuild each method with a new constant pool to eliminate extra constant pool entries
-// FEATURE: Optimize away INSTANCEOF if the class can never be instansiated
 
 public class GCClass {
     private static final String[] PRE_REF = {
@@ -56,6 +55,7 @@ public class GCClass {
     private final Vector work = new Vector();
     private final Hashtable completed = new Hashtable();
     private final Hashtable references = new Hashtable();
+    private final Hashtable instansiated = new Hashtable();
     
     public GCClass(String classpath) throws ClassNotFoundException {
         repo = SyntheticRepository.getInstance(new ClassPath(ClassPath.SYSTEM_CLASS_PATH + File.pathSeparator + classpath));
@@ -81,11 +81,13 @@ public class GCClass {
         return t;
     }
     
-    public final void referenceMethod(String s) throws ClassNotFoundException {
+    public void referenceMethod(String s) throws ClassNotFoundException {
         int p = s.lastIndexOf('.');
         if(p == -1) throw new IllegalArgumentException("invalid class/method string");
         String cs = s.substring(0,p);
         String ms = s.substring(p+1);
+        
+        if(ms.equals("<init>")) instansiated.put(new ObjectType(cs),Boolean.TRUE);
         
         JavaClass c = repoGet(cs);
         Method[] methods = c.getMethods();
@@ -94,7 +96,7 @@ public class GCClass {
                 referenceMethod(new MethodRef(c,methods[i]));
     }
         
-    public final void referenceMethod(MethodRef m) {
+    private final void referenceMethod(MethodRef m) {
         if(completed.get(m) != null) return;
         
         if(m.c.getClassName().startsWith("[")) {
@@ -110,15 +112,15 @@ public class GCClass {
         for(int i=0;i<m.args.length;i++) referenceClass(m.args[i]);
     }
     
-    public final void referenceField(FieldRef f) {
+    private final void referenceField(FieldRef f) {
         Hashtable h = classRefHash(f.c);
         h.put(f,Boolean.TRUE);
         referenceClass(f.ftype);
     }
     
     private Hashtable repoCache = new Hashtable();
-    public JavaClass repoGet(ObjectType t) throws ClassNotFoundException { return repoGet(t.getClassName()); }
-    public JavaClass repoGet(String s) throws ClassNotFoundException {
+    private JavaClass repoGet(ObjectType t) throws ClassNotFoundException { return repoGet(t.getClassName()); }
+    private JavaClass repoGet(String s) throws ClassNotFoundException {
         Object o = repoCache.get(s);
         if(o == null) repoCache.put(s,o = repo.loadClass(s));
         return (JavaClass) o;
@@ -136,16 +138,33 @@ public class GCClass {
             ObjectType t = (ObjectType) e.nextElement();
             JavaClass c = repoGet(t);
             if(c == null) continue;
+            
             Hashtable refs = (Hashtable) references.get(t);
+            // add a ref to clinit is any fields/methods are referenced
             if(refs.size() != 0) {
                 MethodRef clinit = new MethodRef(t,"<clinit>",Type.VOID,Type.NO_ARGS);
                 if(findMethod(c,clinit) != null) referenceMethod(clinit);
             }
+            
             Method[] methods = c.getMethods();
             JavaClass[] supers = c.getSuperClasses();
             JavaClass[] interfaces = c.getInterfaces();
-            //System.err.println("Fixing up " + t);
+            
+            // If a subclass can be instansiated all its superclasses also can
+            if(instansiated.get(t) != null) {
+                for(int i=0;i<supers.length;i++) {
+                    ObjectType st = new ObjectType(supers[i].getClassName());
+                    if(instansiated.get(st) != null) break;
+                    instansiated.put(st, Boolean.TRUE);
+                }
+            }
+            
+            // If a subclass is referenced all is superclasses also are
             for(int i=0;i<supers.length;i++) referenceClass(supers[i]);
+            
+            // Go though each method and look for method references a
+            // superclass or interfaces version of the method, references them
+            // result in references to us
             for(int i=0;methods != null && i<methods.length;i++) {
                 MethodRef mr = new MethodRef(c,methods[i]);
                 if(refs.get(mr) != null) continue;
@@ -179,6 +198,7 @@ public class GCClass {
 
         JavaClass c = repoGet(mr.c.toString());
         
+        // interfaces can only have a clinit method - every other method has no definition
         if(!c.isClass() && !mr.name.equals("<clinit>")) return;
         
         Method m = findMethod(c,mr);
@@ -207,6 +227,8 @@ public class GCClass {
         
         for(int n=0;n<insns.length;n++) {
             Instruction i = insns[n];
+            if(i instanceof NEW)
+                instansiated.put(((CPInstruction)i).getType(cpg),Boolean.TRUE);
             if(i instanceof ANEWARRAY || i instanceof CHECKCAST || i instanceof INSTANCEOF || i instanceof MULTIANEWARRAY || i instanceof NEW)
                 referenceClass(((CPInstruction)i).getType(cpg));
             else if(i instanceof FieldInstruction) // GETFIED, GETSTATIC, PUTFIELD, PUTSTATIC
@@ -235,19 +257,20 @@ public class GCClass {
             Hashtable refs = (Hashtable) references.get(t);
             JavaClass c = repoGet(t.getClassName());
             if(c == null) continue;
+            boolean staticOnly = c.isClass() && instansiated.get(t) == null;
             File cf = new File(outdir,t.getClassName().replace('.',File.separatorChar) + ".class");
             cf.getParentFile().mkdirs();
-            dumpClass(c,refs,cf);
+            dumpClass(c,refs,staticOnly,cf);
         }
     }
     
-    private void dumpClass(JavaClass c, Hashtable refs, File file) throws IOException {
+    private void dumpClass(JavaClass c, Hashtable refs, boolean staticOnly, File file) throws IOException {
         ClassGen cg = new ClassGen(c);
         Method[] methods= c.getMethods();
         for(int i=0;i<methods.length;i++) {
             Method m = methods[i];
             MethodRef mr = new MethodRef(c,m);
-            if(refs.get(mr) == null) {
+            if((staticOnly && !m.isStatic()) || refs.get(mr) == null) {
                 System.err.println("Removing method " + mr);
                 if(false) {
                     cg.removeMethod(m);
@@ -286,8 +309,7 @@ public class GCClass {
     }
     
     public static class Exn extends Exception { public Exn(String s) { super(s); } }
-        
-        
+    
     private static class MethodRef {
         ObjectType c;
         String name;
@@ -319,7 +341,7 @@ public class GCClass {
         public String toString() { return c.toString() + "." + name + Type.getMethodSignature(ret,args); }
     }
     
-    public static class FieldRef {
+    private static class FieldRef {
         ObjectType c;
         String name;
         Type ftype;
