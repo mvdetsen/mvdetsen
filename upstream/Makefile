@@ -1,13 +1,12 @@
 # Inspired by XWT's Makefile.upstream
 
-version_gcc = 3.3.3
+version_gcc = 3.3
+version_gpc = 20030830
 url_gcc-core = http://mirrors.rcn.net/pub/sourceware/gcc/releases/gcc-$(version_gcc)/gcc-core-$(version_gcc).tar.gz
 url_gcc-c++ = http://mirrors.rcn.net/pub/sourceware/gcc/releases/gcc-$(version_gcc)/gcc-g++-$(version_gcc).tar.gz
-url_gcc-g77 = http://mirrors.rcn.net/pub/sourceware/gcc/releases/gcc-$(version_gcc)/gcc-g77-$(version_gcc).tar.gz
-
 patches_gcc = gcc-fixes.patch gcc-fdata-sections-bss.patch
 configure_gcc = --target=mips-unknown-elf --disable-threads --with-gnu-ld --with-gnu-as --with-newlib=yes --enable-sjlj-exceptions --enable-languages="c"
-configure_gcc_step2 = $(configure_gcc) --enable-languages="c,c++,f77"
+configure_gcc_step2 = $(configure_gcc) --enable-languages="c,c++"
 
 version_gpc = 20030830
 url_gpc = http://www.gnu-pascal.de/alpha/gpc-$(version_gpc).tar.gz
@@ -84,7 +83,7 @@ tasks/download_%:
 	cd download && wget --passive-ftp -N $(url_$*)
 	touch $@
 
-tasks/download_gcc: tasks/download_gcc-core tasks/download_gcc-c++ tasks/download_gcc-g77
+tasks/download_gcc: tasks/download_gcc-core tasks/download_gcc-c++
 	touch $@
 
 tasks/extract_%: tasks/download_%
@@ -99,7 +98,6 @@ tasks/extract_gcc: tasks/download_gcc
 	mkdir -p build
 	cd build && gzip -dc ../download/gcc-core-$(version_gcc).tar.gz | tar xf -
 	cd build && gzip -dc ../download/gcc-g++-$(version_gcc).tar.gz | tar xf -
-	cd build && gzip -dc ../download/gcc-g77-$(version_gcc).tar.gz | tar xf -
 	touch $@
 
 tasks/patch_%: tasks/extract_%
@@ -120,7 +118,7 @@ tasks/build_%: tasks/patch_%
 tasks/build_gcc_step2: tasks/patch_gcc tasks/build_libc
 	mkdir -p $(usr)
 	mkdir -p build/gcc-obj && cd build/gcc-obj && \
-		../gcc-$(version_gcc)/configure --prefix=$(usr) $(configure_gcc_step2) && \
+		echo | ../gcc-$(version_gcc)/configure --prefix=$(usr) $(configure_gcc_step2) && \
 		$(MAKE) TARGET_CFLAGS="$(MIPS_CFLAGS)" && \
 		$(MAKE) install
 	touch $@
