@@ -4,6 +4,8 @@ classes = $(sources:src/%.java=build/%.class)
 
 bcel_jar = upstream/bcel-5.1/bcel-5.1.jar
 
+TAR = $(test `uname` = SunOS && echo gtar || echo tar)
+
 all: $(classes)
 
 $(classes): $(sources) $(bcel_jar)
@@ -18,7 +20,7 @@ test: all Test.class
 
 $(bcel_jar):
 	mkdir -p upstream
-	curl http://mirrors.mix5.com/apache/jakarta/bcel/binaries/bcel-5.1.tar.gz | gzip -dc | tar -xf - -C upstream
+	curl http://mirrors.mix5.com/apache/jakarta/bcel/binaries/bcel-5.1.tar.gz | gzip -dc | $(TAR) -xf - -C upstream
 
 clean: 
 	rm -rf build/*
