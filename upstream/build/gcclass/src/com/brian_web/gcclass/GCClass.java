@@ -58,7 +58,6 @@ public class GCClass {
     private final Hashtable references = new Hashtable();
     
     public GCClass(String classpath) throws ClassNotFoundException {
-        System.err.println(ClassPath.SYSTEM_CLASS_PATH + File.pathSeparator + classpath);
         repo = SyntheticRepository.getInstance(new ClassPath(ClassPath.SYSTEM_CLASS_PATH + File.pathSeparator + classpath));
         for(int i=0;i<PRE_REF.length;i++) referenceMethod(PRE_REF[i]);
     }
