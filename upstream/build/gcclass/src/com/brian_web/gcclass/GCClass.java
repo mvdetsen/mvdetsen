@@ -48,7 +48,12 @@ public class GCClass {
             System.exit(1);
         }
         GCClass gc = new GCClass(args[0]);
-        for(int i=2;i<args.length;i++) gc.referenceMethod(args[i]);
+        for(int i=2;i<args.length;i++) {
+            if(args[i].startsWith("hint:"))
+                gc.parseHint(args[i].substring(5));
+            else
+                gc.referenceMethod(args[i]);
+        }
         gc.go();
         gc.dump(new File(args[1]));
     }
@@ -58,6 +63,7 @@ public class GCClass {
     private final Hashtable completed = new Hashtable();
     private final Hashtable references = new Hashtable();
     private final Hashtable instansiated = new Hashtable();
+    private final Hashtable hints = new Hashtable();
     
     public GCClass(String classpath) throws ClassNotFoundException {
         if(classpath.startsWith("="))
@@ -112,6 +118,28 @@ public class GCClass {
                 MethodRef mr = new MethodRef(c,methods[i]);
                 if(skip) completed.put(mr,Boolean.TRUE);
                 else referenceMethod(mr);
+            }
+        }
+    }
+    
+    public void parseHint(String s) throws ClassNotFoundException {
+        int p = s.indexOf(':');
+        if(p == -1) throw new IllegalArgumentException("invalid  hint");
+        String cms = s.substring(0,p);
+        String hint = s.substring(p+1);
+        p = cms.lastIndexOf('.');
+        if(p == -1)  throw new IllegalArgumentException("invalid hint");
+        String cs = cms.substring(0,p);
+        String ms = cms.substring(p+1);
+        
+        JavaClass c = repoGet(cs);
+        Method[] methods = c.getMethods();
+        for(int i=0;i<methods.length;i++) {
+            if(ms.equals("*") || methods[i].getName().equals(ms)) {
+                MethodRef mr = new MethodRef(c,methods[i]);
+                Vector v = (Vector) hints.get(mr);
+                if(v == null) hints.put(mr,v=new Vector());
+                v.add(hint);
             }
         }
     }
@@ -172,15 +200,16 @@ public class GCClass {
             }
         }
     }
-    
+        
     private void fixup() throws ClassNotFoundException {
         for(Enumeration e = references.keys(); e.hasMoreElements(); ) {
             ObjectType t = (ObjectType) e.nextElement();
             JavaClass c = repoGet(t);
-            if(c == null) continue;
-            
             Hashtable refs = (Hashtable) references.get(t);
-            // add a ref to clinit is any fields/methods are referenced
+             
+            if(c == null) continue;
+           
+            // add a ref to clinit if any fields/methods are referenced
             if(refs.size() != 0) {
                 MethodRef clinit = new MethodRef(t,"<clinit>",Type.VOID,Type.NO_ARGS);
                 if(findMethod(c,clinit) != null) referenceMethod(clinit);
@@ -275,6 +304,11 @@ public class GCClass {
                 referenceField(new FieldRef((FieldInstruction)i,cpg));
             else if(i instanceof InvokeInstruction) // INVOKESTATIC, INVOKEVIRTUAL, INVOKESPECIAL
                 referenceMethod(new MethodRef((InvokeInstruction)i,cpg,mr));
+        }
+        
+        if(hints.get(mr) != null) {
+            Vector v = (Vector) hints.get(mr);
+            for(int i=0;i<v.size();i++) referenceMethod((String) v.elementAt(i));
         }
     }
     
