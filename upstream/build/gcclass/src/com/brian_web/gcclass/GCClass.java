@@ -35,6 +35,10 @@ public class GCClass {
         "java.security.*"
     };
     
+    private static final String[] IGNORED_FIELDS = {
+        "java.io.ObjectInputStream.SUBCLASS_IMPLEMENTATION_PERMISSION"
+    };
+    
     private static final String[] NO_OUTPUT = { "java", "javax", "sun", "com.sun", "apple", "com.apple" };
     
     
@@ -128,9 +132,15 @@ public class GCClass {
         for(int i=0;i<m.args.length;i++) referenceClass(m.args[i]);
     }
     
-    private final void referenceField(FieldRef f) {
+    private final void referenceField(FieldRef f) throws ClassNotFoundException  {
+        if(completed.get(f) != null) return;
+        
         Hashtable h = classRefHash(f.c);
         h.put(f,Boolean.TRUE);
+        
+        // process(FieldRef) doesn't create much work so we don't bother queuing it 
+        process(f);
+        
         referenceClass(f.ftype);
     }
     
@@ -268,12 +278,44 @@ public class GCClass {
         }
     }
     
+    private void process(FieldRef fr) throws ClassNotFoundException {
+        if(completed.get(fr) != null) return;
+        completed.put(fr,Boolean.TRUE);
+
+        JavaClass c = repoGet(fr.c.toString());
+        Field f = findField(c,fr);
+        if(f == null) {
+            JavaClass supers[] = c.getSuperClasses();
+            for(int i=0;i<supers.length;i++) {
+                f = findField(supers[i],fr);
+                if(f != null) { referenceField(new FieldRef(supers[i],f)); return; }
+            }
+            String sig = fr.toString();
+            for(int i=0;i<IGNORED_FIELDS.length;i++) {
+                String pat = IGNORED_FIELDS[i];
+                if(pat.endsWith("*") ? sig.startsWith(pat.substring(0,pat.length()-1)) : sig.equals(pat)) return;
+            }
+            throw new ClassNotFoundException("" + fr + " not found (but the class was)");            
+        }
+        /* nothing to do */
+    }
+    
     private static Method findMethod(JavaClass c, MethodRef mr) {
         Method[] ms = c.getMethods();
         for(int i=0;i<ms.length;i++) {
             Method m = ms[i];
             if(m.getName().equals(mr.name) && m.getReturnType().equals(mr.ret) && Arrays.equals(m.getArgumentTypes(),mr.args))
                return m;
+        }
+        return null;
+    }
+    
+    private static Field findField(JavaClass c, FieldRef fr) {
+        Field[] fs = c.getFields();
+        for(int i=0;i<fs.length;i++) {
+            Field f = fs[i];
+            if(f.getName().equals(fr.name) && f.getType().equals(fr.ftype))
+                return f;
         }
         return null;
     }
