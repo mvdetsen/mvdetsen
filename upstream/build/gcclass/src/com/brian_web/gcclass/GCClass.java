@@ -23,14 +23,19 @@ import org.apache.bcel.classfile.*;
 // FEATURE: Optimize away INSTANCEOF if the class can never be instansiated
 
 public class GCClass {
-    // This is called outside pure java so we don't see the call
-    private static final String[] PRE_REF = { "java.lang.Thread.run" };
-    // The JDK uses some voodoo under the hood to implement these methods
+    private static final String[] PRE_REF = {
+        "java.lang.Thread.run",
+        "java.security.PrivilegedAction.run"
+    };
+    
+    // NOTE: This doesn't mean these classes are ignored alltogether
+    //       failures to resolve them are just ignored
     private static final String[] IGNORED_METHODS = {
         "java.net.SocketImpl.setOption(ILjava/lang/Object;)V",
         "java.net.SocketImpl.getOption(I)Ljava/lang/Object;",
         "java.awt.geom.*",
-        "apple.awt.*"
+        "apple.awt.*",
+        "java.security.*"
     };
     
     private static final String[] NO_OUTPUT = { "java", "javax", "sun", "com.sun", "apple", "com.apple" };
@@ -298,12 +303,7 @@ public class GCClass {
             this(i.getClassType(cp),i.getMethodName(cp),i.getReturnType(cp),i.getArgumentTypes(cp));
         }
         
-        public MethodRef(ObjectType c, String name, Type ret, Type[] args) {
-            this.c = c;
-            this.name = name;
-            this.ret = ret;
-            this.args = args;
-        }
+        public MethodRef(ObjectType c, String name, Type ret, Type[] args) { this.c = c; this.name = name; this.ret = ret; this.args = args; }
         
         public boolean equals(Object o_) {
             if(!(o_ instanceof MethodRef)) return false;
@@ -311,14 +311,12 @@ public class GCClass {
             boolean r = name.equals(o.name) && c.equals(o.c) && ret.equals(o.ret) && Arrays.equals(args,o.args);
             return r;
         }
-        
         // FIXME: ArrayType.java in BCEL doesn't properly implement hashCode()
         public int hashCode() {
             int hc = name.hashCode()  ^ c.hashCode(); //^ ret.hashCode();
             //for(int i=0;i<args.length;i++) hc ^= args[i].hashCode();
             return hc;
         }
-        
         public String toString() { return c.toString() + "." + name + Type.getMethodSignature(ret,args); }
     }
     
@@ -341,11 +339,7 @@ public class GCClass {
             FieldRef o = (FieldRef)o_;
             return name.equals(o.name) && c.equals(o.c);
         }
-        
-        public int hashCode() {
-            return name.hashCode() ^ c.hashCode();
-        }
-        
+        public int hashCode() { return name.hashCode() ^ c.hashCode(); }
         public String toString() { return c.toString() + "." + name; }
     }
 }
