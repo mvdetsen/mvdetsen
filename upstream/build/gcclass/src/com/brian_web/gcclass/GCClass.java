@@ -42,7 +42,7 @@ public class GCClass {
     
     public static void main(String[] args) throws Exception {
         if(args.length < 3) {
-            System.err.println("Usage GCClass  classpath outdir entrypoint1 ... [ entrypoint n]");
+            System.err.println("Usage GCClass classpath outdir entrypoint1 ... [ entrypoint n]");
             System.exit(1);
         }
         GCClass gc = new GCClass(args[0]);
@@ -58,8 +58,18 @@ public class GCClass {
     private final Hashtable instansiated = new Hashtable();
     
     public GCClass(String classpath) throws ClassNotFoundException {
-        repo = SyntheticRepository.getInstance(new ClassPath(ClassPath.SYSTEM_CLASS_PATH + File.pathSeparator + classpath));
-        for(int i=0;i<PRE_REF.length;i++) referenceMethod(PRE_REF[i]);
+        if(classpath.startsWith("="))
+            classpath = classpath.substring(1);
+        else
+            classpath = ClassPath.SYSTEM_CLASS_PATH + File.pathSeparator + classpath;
+        repo = SyntheticRepository.getInstance(new ClassPath(classpath));
+        for(int i=0;i<PRE_REF.length;i++) {
+            try {
+                referenceMethod(PRE_REF[i]);
+            } catch(ClassNotFoundException e) {
+                System.err.println("WARNING: Couldn't preref: " + PRE_REF[i]);
+            }
+        }
     }
     
     private Hashtable classRefHash(JavaClass c) { return classRefHash(new ObjectType(c.getClassName())); }
@@ -86,14 +96,22 @@ public class GCClass {
         if(p == -1) throw new IllegalArgumentException("invalid class/method string");
         String cs = s.substring(0,p);
         String ms = s.substring(p+1);
+        boolean skip = false;
         
-        if(ms.equals("<init>")) instansiated.put(new ObjectType(cs),Boolean.TRUE);
+        if(cs.startsWith("-")) { cs = cs.substring(1); skip = true; }
+        
+        if(!skip && (ms.equals("*") || ms.equals("<init>")))
+            instansiated.put(new ObjectType(cs),Boolean.TRUE);
         
         JavaClass c = repoGet(cs);
         Method[] methods = c.getMethods();
-        for(int i=0;i<methods.length;i++)
-            if(methods[i].getName().equals(ms))
-                referenceMethod(new MethodRef(c,methods[i]));
+        for(int i=0;i<methods.length;i++) {
+            if(ms.equals("*") || methods[i].getName().equals(ms)) {
+                MethodRef mr = new MethodRef(c,methods[i]);
+                if(skip) completed.put(mr,Boolean.TRUE);
+                else referenceMethod(mr);
+            }
+        }
     }
         
     private final void referenceMethod(MethodRef m) {
@@ -126,10 +144,24 @@ public class GCClass {
         return (JavaClass) o;
     }
     
-    public void go() throws Exn, ClassNotFoundException {
+    public void go() throws Exn {
         while(work.size() != 0) {
-            while(work.size() != 0) process((MethodRef) work.remove(work.size()-1));
-            fixup();
+            while(work.size() != 0) {
+                MethodRef mr = (MethodRef) work.remove(work.size()-1);
+                try {
+                    process(mr);
+                } catch(ClassNotFoundException e) {
+                    e.printStackTrace();
+                    String refBy = mr.refBy == null ? "unknown" : mr.refBy.toString();
+                    throw new Exn("ERROR: " + refBy + " references " + mr + " which cannot be found");
+                }
+            }
+            try {
+                fixup();
+            } catch(ClassNotFoundException e) {
+                e.printStackTrace();
+                throw new Exn("ClassNotFoundException in fixup");
+            }
         }
     }
     
@@ -213,7 +245,7 @@ public class GCClass {
                 String pat = IGNORED_METHODS[i];
                 if(pat.endsWith("*") ? sig.startsWith(pat.substring(0,pat.length()-1)) : sig.equals(pat)) return;
             }
-            throw new Exn("Couldn't find " + sig);
+            throw new ClassNotFoundException("" + mr + " not found (but the class was)");
         }
         
         Code code = m.getCode();
@@ -234,7 +266,7 @@ public class GCClass {
             else if(i instanceof FieldInstruction) // GETFIED, GETSTATIC, PUTFIELD, PUTSTATIC
                 referenceField(new FieldRef((FieldInstruction)i,cpg));
             else if(i instanceof InvokeInstruction) // INVOKESTATIC, INVOKEVIRTUAL, INVOKESPECIAL
-                referenceMethod(new MethodRef((InvokeInstruction)i,cpg));
+                referenceMethod(new MethodRef((InvokeInstruction)i,cpg,mr));
         }
     }
     
@@ -315,13 +347,15 @@ public class GCClass {
         String name;
         Type ret;
         Type[] args;
-        
+        MethodRef refBy;
+                
         public MethodRef(JavaClass c, Method m) {
             this(new ObjectType(c.getClassName()),m.getName(),m.getReturnType(),m.getArgumentTypes());
         }
         
-        public MethodRef(InvokeInstruction i, ConstantPoolGen cp) {
+        public MethodRef(InvokeInstruction i, ConstantPoolGen cp, MethodRef refBy) {
             this(i.getClassType(cp),i.getMethodName(cp),i.getReturnType(cp),i.getArgumentTypes(cp));
+            this.refBy = refBy;
         }
         
         public MethodRef(ObjectType c, String name, Type ret, Type[] args) { this.c = c; this.name = name; this.ret = ret; this.args = args; }
@@ -345,6 +379,7 @@ public class GCClass {
         ObjectType c;
         String name;
         Type ftype;
+        MethodRef refBy;
         
         public FieldRef(JavaClass c, Field f) {
             this(new ObjectType(c.getClassName()),f.getName(),f.getType());
