@@ -4,7 +4,7 @@ classes = $(sources:src/%.java=build/%.class)
 
 bcel_jar = upstream/bcel-5.1/bcel-5.1.jar
 
-TAR = $(test `uname` = SunOS && echo gtar || echo tar)
+TAR = $(shell test `uname` = SunOS && echo gtar || echo tar)
 
 all: $(classes)
 
