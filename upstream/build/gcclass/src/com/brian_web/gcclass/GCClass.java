@@ -1,6 +1,6 @@
 // Copyright (C) 2004 Brian Alliet
 
-// Based on NanoGoat by Adam Megac
+// Based on NanoGoat by Adam Megacz
 
 // Copyright (C) 2004 Adam Megacz <adam@ibex.org> all rights reserved.
 //
