@@ -98,6 +98,8 @@ public class Type {
         protected Array(Type t, int dim) {  super(_initHelper(t, dim)); }
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
+        String internalForm() { throw new Error("Type.Array does not have an internalForm()"); }
+        String[] components() { throw new Error("Type.Array does not have components()"); }
         private static String _initHelper(Type t, int dim) {
             StringBuffer sb = new StringBuffer(t.descriptor.length() + dim);
             for(int i=0;i<dim;i++) sb.append("[");
