@@ -95,10 +95,10 @@ public class Type {
     }    
 
     public static class Array extends Object {
-        protected Array(Type t, int dim) {  super(arrayify(t, dim)); }
+        protected Array(Type t, int dim) {  super(_initHelper(t, dim)); }
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
-        private static String arrayify(Type t, int dim) {
+        private static String _initHelper(Type t, int dim) {
             StringBuffer sb = new StringBuffer(t.descriptor.length() + dim);
             for(int i=0;i<dim;i++) sb.append("[");
             sb.append(t.descriptor);
