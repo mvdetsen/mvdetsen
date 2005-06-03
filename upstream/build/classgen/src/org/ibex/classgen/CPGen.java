@@ -17,9 +17,6 @@ class CPGen {
     
     CPGen() { }
     
-    /*
-     * Entries 
-     */
     public abstract class Ent {
         int n; // this is the refcount if state == OPEN, index if >= STABLE
         int tag;
@@ -31,18 +28,18 @@ class CPGen {
         abstract Object key() throws ClassGen.ClassReadExn; // be careful using this, it drags in a bunch of code
     }
     
-    // INVARIANTS: tag == 3 || tag == 4
     class IntEnt extends Ent {
-        int i;
-        IntEnt(int tag) { super(tag); }
+        final int i;
+        IntEnt(int i) { super(3); this.i = i; }
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeInt(i);  }
-        Object key() {
-            switch(tag) {
-                case 3: return new Integer(i);
-                case 4: return new Float(Float.intBitsToFloat(i));
-                default: throw new Error("should never happen");
-            }
-        }
+        Object key() { return new Integer(i); }
+    }
+
+    class FloatEnt extends Ent {
+        final float f;
+        FloatEnt(float f) { super(4); this.f = f; }
+        void dump(DataOutput o) throws IOException { super.dump(o); o.writeFloat(f);  }
+        Object key() { return new Float(f); }
     }
     
     // INVARIANTS: tag == 5 || tag == 6
@@ -197,14 +194,8 @@ class CPGen {
             CPRefEnt ce = new CPRefEnt(8);
             ce.e1 = addUtf8((String)o);
             ent = ce;
-        } else if(o instanceof Integer) {
-            IntEnt ue = new IntEnt(3);
-            ue.i = ((Integer)o).intValue();
-            ent = ue;
-        } else if(o instanceof Float) {
-            IntEnt ue = new IntEnt(4);
-            ue.i = Float.floatToIntBits(((Float)o).floatValue());
-            ent = ue;
+        } else if(o instanceof Integer) {  ent = new IntEnt(((Integer)o).intValue());
+        } else if(o instanceof Float) {    ent = new FloatEnt(((Float)o).floatValue());
         } else if(o instanceof Long) {
             LongEnt le = new LongEnt(5);
             le.l = ((Long)o).longValue();
@@ -345,11 +336,15 @@ class CPGen {
                     break;
                 }
                 case 3: // Integer
+                {
+                    FloatEnt ie;
+                    e = ie = new FloatEnt(in.readFloat());
+                    break;
+                }
                 case 4: // Float
                 {
                     IntEnt ie;
-                    e = ie = new IntEnt(tag);
-                    ie.i = in.readInt();
+                    e = ie = new IntEnt(in.readInt());
                     break;
                 }
                 case 5: // Long
