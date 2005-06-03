@@ -34,7 +34,8 @@ public class ClassFile implements CGConst {
         if ((flags & ACC_TRANSIENT) != 0)    ret += "transient ";
         return ret;
     }
-  
+
+    public Type.Class getType() { return thisType; }
     public String toString() { StringBuffer sb = new StringBuffer(); toString(sb); return sb.toString(); }
     public void   toString(StringBuffer sb) {
         sb.append(flagsToString(flags));
@@ -227,7 +228,7 @@ public class ClassFile implements CGConst {
         int numFields = i.readShort();
         for(int j=0; j<numFields; j++) fields.add(new FieldGen(cp, i));
         int numMethods = i.readShort();
-        for(int j=0; j<numMethods; j++) methods.add(new MethodGen(cp, i));
+        for(int j=0; j<numMethods; j++) methods.add(new MethodGen(cp, i, this));
         attributes = new AttrGen(cp, i);
         sourceFile = (String)attributes.get("SourceFile");
     }

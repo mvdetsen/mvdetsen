@@ -6,8 +6,12 @@ import java.util.*;
 /** A class representing a method in a generated classfile
     @see ClassFile#addMethod */
 public class MethodGen implements CGConst {
-    private final static boolean EMIT_NOPS = true;
+    private final static boolean EMIT_NOPS = false;
     
+    private static final int NO_CODE = -1;
+    private static final int FINISHED = -2;
+
+    private final ClassFile owner;
     private final CPGen cp;
     private final String name;
     private final Type ret;
@@ -46,8 +50,9 @@ public class MethodGen implements CGConst {
         // FIXME: attrs, body
     }
 
-    MethodGen(CPGen cp, DataInput in) throws IOException {
+    MethodGen(CPGen cp, DataInput in, ClassFile owner) throws IOException {
         this.cp = cp;
+        this.owner = owner;
         flags = in.readShort();
         name = cp.getUtf8ByIndex(in.readShort());
         String descriptor = cp.getUtf8ByIndex(in.readShort());
@@ -67,20 +72,18 @@ public class MethodGen implements CGConst {
         this.ret = ret;
         this.args = args;
         this.flags = flags;
+        this.owner = owner;
         
         attrs = new ClassFile.AttrGen(cp);
         codeAttrs = new ClassFile.AttrGen(cp);
         
         cp.addUtf8(name);
-        cp.addUtf8(getDescriptor());
+        cp.addUtf8(owner.getType().method(name, ret, args).getDescriptor());
         
         if((owner.flags & ACC_INTERFACE) != 0 || (flags & (ACC_ABSTRACT|ACC_NATIVE)) != 0) size = capacity = -1;
         
         maxLocals = Math.max(args.length + (flags&ACC_STATIC)==0 ? 1 : 0, 4);
     }
-    
-    /** Returns the descriptor string for this method */
-    public String getDescriptor() { return new MethodRef(null, name, ret, args).getDescriptor(); }
     
     private class ExnTableEnt {
         public int start;
@@ -121,7 +124,8 @@ public class MethodGen implements CGConst {
     
     private final void grow() { if(size == capacity) grow(size+1); }
     private final void grow(int newCap) {
-        if(capacity == -1) throw new IllegalStateException("method can't have code");
+        if(capacity == NO_CODE) throw new IllegalStateException("method can't have code");
+        if(capacity == FINISHED) throw new IllegalStateException("method has been finished");
         if(newCap <= capacity) return;
         newCap = Math.max(newCap, capacity == 0 ? 256 : capacity*2);
         
@@ -383,7 +387,7 @@ public class MethodGen implements CGConst {
     }
     
     private void _finish() throws IOException {
-        if(size == -1) return;
+        if(size == FINISHED) return;
         
         cp.stable();
         
@@ -611,13 +615,13 @@ public class MethodGen implements CGConst {
             o.writeShort(cp.getIndex((CPGen.Ent)thrownExceptions.get(e.nextElement())));
         attrs.add("Exceptions", baos.toByteArray());
         
-        size = -1;        
+        size = capacity = FINISHED;        
     }
         
     void dump(DataOutput o) throws IOException {
         o.writeShort(flags);
         o.writeShort(cp.getUtf8Index(name));
-        o.writeShort(cp.getUtf8Index(getDescriptor()));
+        o.writeShort(cp.getUtf8Index(owner.getType().method(name, ret, args).getDescriptor()));
         o.writeShort(attrs.size());
         attrs.dump(o);
     }

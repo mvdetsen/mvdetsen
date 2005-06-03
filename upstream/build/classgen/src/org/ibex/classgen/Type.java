@@ -89,6 +89,50 @@ public class Type {
             for(int i=0;st.hasMoreTokens();i++) a[i] = st.nextToken();
             return a;
         }
+
+        public Method method(String name, Type returnType, Type[] argTypes) { return new Method(name, returnType, argTypes); }
+        public Field  field(String name, Type type) { return new Field(name, type); }
+
+        public abstract class Member {
+            public final String name;
+            private Member(String name) { this.name = name; }
+            public Type.Class getDeclaringClass() { return Type.Class.this; }
+            public abstract String getDescriptor();
+            public boolean equals(Object o_) {
+                if(!(o_ instanceof Member)) return false;
+                Member o = (Member) o_;
+                return o.getDeclaringClass().equals(getDeclaringClass()) &&
+                    o.name.equals(name) &&
+                    o.getDescriptor().equals(getDescriptor());
+            }
+            public int hashCode() { return getDeclaringClass().hashCode() ^ name.hashCode() ^ getDescriptor().hashCode(); }
+        }
+    
+        public class Field extends Member {
+            /** Create a reference to field <i>name</i> of class <i>c</i> with the type <i>t</i>  */    
+            public final Type type;
+            private Field(String name, Type t) { super(name); this.type = t; }
+            public String getDescriptor() { return name; }
+        }
+
+        public class Method extends Member {
+            final Type[] argTypes;
+            final Type   returnType;
+            private Method(String name, Type returnType, Type[] argTypes) {
+                super(name);
+                this.argTypes = argTypes;
+                this.returnType = returnType;
+            }
+            public String getDescriptor() {
+                StringBuffer sb = new StringBuffer(argTypes.length*4);
+                sb.append("(");
+                for(int i=0;i<argTypes.length;i++) sb.append(argTypes[i].getDescriptor());
+                sb.append(")");
+                sb.append(returnType.getDescriptor());
+                return sb.toString();
+            }
+        }
+
     }    
 
     public static class Array extends Type.Ref {

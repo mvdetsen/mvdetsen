@@ -89,12 +89,12 @@ class CPGen {
                     NameAndTypeKey nt = (NameAndTypeKey) e2.key();
                     Type t = Type.instance(nt.type);
                     if(t == null) throw new ClassFile.ClassReadExn("invalid type descriptor");
-                    return new FieldRef((Type.Class)e1.key(), nt.name, t);
+                    return ((Type.Class)e1.key()).field(nt.name, t);
                 }
                 case 10: case 11: {
                     NameAndTypeKey nt = (NameAndTypeKey) e2.key();
                     if (e1.key() == null) throw new Error(e1.tag + " => " + e1.key());
-                    return new MethodRef((Type.Class)e1.key(), "methodname", Type.VOID, new Type[0]); // FIXME FIXME
+                    return ((Type.Class)e1.key()).method("methodname", Type.VOID, new Type[0]); // FIXME FIXME
                 }
                 case 12: {
                     return new NameAndTypeKey(((Utf8Ent)e1).s, ((Utf8Ent)e2).s); 
@@ -215,12 +215,12 @@ class CPGen {
             ce.e1 = addUtf8(key.name);
             ce.e2 = addUtf8(key.type);
             ent = ce;
-        } else if(o instanceof MemberRef) {
-            MemberRef key = (MemberRef) o;
-            int tag = invokeInterface ? 11 : o instanceof FieldRef ? 9 : o instanceof MethodRef ? 10 : 0;
+        } else if(o instanceof Type.Class.Member) {
+            Type.Class.Member key = (Type.Class.Member) o;
+            int tag = invokeInterface ? 11 : o instanceof Type.Class.Field ? 9 : o instanceof Type.Class.Method ? 10 : 0;
             if(tag == 0) throw new Error("should never happen");
             CPRefEnt ce = new CPRefEnt(tag);
-            ce.e1 = add(key.klass);
+            ce.e1 = add(key.getDeclaringClass());
             ce.e2 = addNameAndType(key.name, key.getDescriptor());
             ent = ce;
         } else {
@@ -326,8 +326,8 @@ class CPGen {
             switch(tag) {
                 case 7: // Object Type
                 case 8: // String
-                case 9: // FieldRef
-                case 10: // MethodRef
+                case 9: // Type.Class.Field
+                case 10: // Type.Class.Method
                 case 11: // Instance Method Ref
                 case 12: // NameAndType
                 {
