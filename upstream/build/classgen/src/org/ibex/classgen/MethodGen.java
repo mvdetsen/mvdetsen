@@ -107,7 +107,7 @@ public class MethodGen implements CGConst {
         @param handler The instruction of the excepton handler
         @param type The type of exception that is to be handled (MUST inherit from Throwable)
     */
-    public final void addExceptionHandler(int start, int end, int handler, Type.Object type) {
+    public final void addExceptionHandler(int start, int end, int handler, Type.Class type) {
         exnTable.put(type, new ExnTableEnt(start, end, handler, cp.add(type)));
     }
     
@@ -115,7 +115,7 @@ public class MethodGen implements CGConst {
         NOTE: This isn't enforced by the JVM. This is for reference only. A method can throw exceptions not declared to be thrown 
         @param type The type of exception that can be thrown 
     */
-    public final void addThrow(Type.Object type) {
+    public final void addThrow(Type.Class type) {
         thrownExceptions.put(type, cp.add(type));
     }
     

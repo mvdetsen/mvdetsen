@@ -19,12 +19,12 @@ public class Type {
     public static final Type CHAR = new Type("C", "char");
     public static final Type SHORT = new Type("S", "short");
     
-    public static final Type.Object OBJECT = new Type.Object("java.lang.Object");
-    public static final Type.Object STRING = new Type.Object("java.lang.String");
-    public static final Type.Object STRINGBUFFER = new Type.Object("java.lang.StringBuffer");
-    public static final Type.Object INTEGER_OBJECT = new Type.Object("java.lang.Integer");
-    public static final Type.Object DOUBLE_OBJECT = new Type.Object("java.lang.Double");
-    public static final Type.Object FLOAT_OBJECT = new Type.Object("java.lang.Float");
+    public static final Type.Class OBJECT = new Type.Class("java.lang.Object");
+    public static final Type.Class STRING = new Type.Class("java.lang.String");
+    public static final Type.Class STRINGBUFFER = new Type.Class("java.lang.StringBuffer");
+    public static final Type.Class INTEGER_OBJECT = new Type.Class("java.lang.Integer");
+    public static final Type.Class DOUBLE_OBJECT = new Type.Class("java.lang.Double");
+    public static final Type.Class FLOAT_OBJECT = new Type.Class("java.lang.Float");
     
     /** A zero element Type[] array (can be passed as the "args" param when a method takes no arguments */
     public static final Type[] NO_ARGS = new Type[0];
@@ -34,7 +34,7 @@ public class Type {
         Type ret = (Type)instances.get(d);
         if (ret != null) return ret;
         if (d.endsWith("[")) return new Type.Array(fromDescriptor(d.substring(d.length()-1)));
-        return new Type.Object(d);
+        return new Type.Class(d);
     }
 
     public       String  toString() { return toString; }
@@ -42,11 +42,15 @@ public class Type {
     public       int     hashCode() { return descriptor.hashCode(); }
     public       boolean equals(java.lang.Object o) { return this==o; }
 
-    public Type.Object asObject() { throw new RuntimeException("attempted to use "+this+" as a Type.Object, which it is not"); }
-    public Type.Array  asArray() { throw new RuntimeException("attempted to use "+this+" as a Type.Array, which it is not"); }
-    public Type.Array  makeArray() { return new Type.Array(this); }
-    public boolean     isObject() { return false; }
-    public boolean     isArray() { return false; }
+    public Type.Array  makeArray() { return (Type.Array)fromDescriptor(descriptor+"["); }
+
+    public Type.Ref    asRef()       { throw new RuntimeException("attempted to use "+this+" as a Type.Ref, which it is not"); }
+    public Type.Class  asClass()     { throw new RuntimeException("attempted to use "+this+" as a Type.Class, which it is not"); }
+    public Type.Array  asArray()     { throw new RuntimeException("attempted to use "+this+" as a Type.Array, which it is not"); }
+    public boolean     isPrimitive() { return !isRef(); }
+    public boolean     isRef()       { return false; }
+    public boolean     isClass()     { return false; }
+    public boolean     isArray()     { return false; }
 
     // Protected/Private //////////////////////////////////////////////////////////////////////////////
 
@@ -58,12 +62,17 @@ public class Type {
         instances.put(this.descriptor = descriptor, this);
     }
 
-    /** Class representing Object types (any non-primitive type) */
-    public static class Object extends Type {
-        protected Object(String s) { super(_initHelper(s), _initHelper2(s)); }
-        protected Object(String descriptor, String hr) { super(_initHelper(descriptor), _initHelper2(hr)); }
-        public Type.Object asObject() { return this; }
-        public boolean isObject() { return true; }
+    public static class Ref extends Type {
+        protected Ref(String descriptor) { super(descriptor); }
+        protected Ref(String descriptor, String humanReadable) { super(descriptor, humanReadable); }
+        public    Type.Ref asRef() { return this; }
+        public    boolean  isRef() { return true; }
+    }
+
+    public static class Class extends Type.Ref {
+        protected Class(String s) { super(_initHelper(s), _initHelper2(s)); }
+        public Type.Class asClass() { return this; }
+        public boolean isClass() { return true; }
         public String getShortName() { return toString.substring(toString.lastIndexOf('.')+1); }
         String internalForm() { return descriptor.substring(1, descriptor.length()-1); }
         private static String _initHelper(String s) {
@@ -82,12 +91,11 @@ public class Type {
         }
     }    
 
-    public static class Array extends Type.Object {
+    public static class Array extends Type.Ref {
         protected Array(Type t) { super(t.getDescriptor() + "[", t.toString() + "[]"); }
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
         public int dimension() { return descriptor.length() - descriptor.indexOf('['); }
-        String[] components() { throw new Error("Type.Array does not have components()"); }
     }
 
 }

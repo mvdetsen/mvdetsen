@@ -5,9 +5,9 @@ import java.io.*;
 
 /** Class generation object representing the whole classfile */
 public class ClassGen implements CGConst {
-    private final Type.Object thisType;
-    private final Type.Object superType;
-    private final Type.Object[] interfaces;
+    private final Type.Class thisType;
+    private final Type.Class superType;
+    private final Type.Class[] interfaces;
     private short minor;
     private short major;
     final int flags;
@@ -60,13 +60,13 @@ public class ClassGen implements CGConst {
         sb.append("}");
     }
 
-    /** @see #ClassGen(Type.Object, Type.Object, int) */
+    /** @see #ClassGen(Type.Class, Type.Class, int) */
     public ClassGen(String name, String superName, int flags) {
-        this(Type.fromDescriptor(name).asObject(), Type.fromDescriptor(superName).asObject(), flags);
+        this(Type.fromDescriptor(name).asClass(), Type.fromDescriptor(superName).asClass(), flags);
     }
 
-    /** @see #ClassGen(Type.Object, Type.Object, int, Type.Object[]) */
-    public ClassGen(Type.Object thisType, Type.Object superType, int flags) {
+    /** @see #ClassGen(Type.Class, Type.Class, int, Type.Class[]) */
+    public ClassGen(Type.Class thisType, Type.Class superType, int flags) {
         this(thisType, superType, flags, null);
     }
     
@@ -75,7 +75,7 @@ public class ClassGen implements CGConst {
         @param superType The superclass of the generated class (commonly Type.OBJECT) 
         @param flags The access flags for this class (ACC_PUBLIC, ACC_FINAL, ACC_SUPER, ACC_INTERFACE, and ACC_ABSTRACT)
     */
-    public ClassGen(Type.Object thisType, Type.Object superType, int flags, Type.Object[] interfaces) {
+    public ClassGen(Type.Class thisType, Type.Class superType, int flags, Type.Class[] interfaces) {
         if((flags & ~(ACC_PUBLIC|ACC_FINAL|ACC_SUPER|ACC_INTERFACE|ACC_ABSTRACT)) != 0)
             throw new IllegalArgumentException("invalid flags");
         this.thisType = thisType;
@@ -220,10 +220,10 @@ public class ClassGen implements CGConst {
         //if (major != 45 && major != 46) throw new ClassReadExn("invalid major version");
         cp = new CPGen(i);
         flags = i.readShort();
-        thisType = (Type.Object)cp.getType(i.readShort());
-        superType = (Type.Object)cp.getType(i.readShort());
-        interfaces = new Type.Object[i.readShort()];
-        for(int j=0; j<interfaces.length; j++) interfaces[j] = (Type.Object)cp.getType(i.readShort());
+        thisType = (Type.Class)cp.getType(i.readShort());
+        superType = (Type.Class)cp.getType(i.readShort());
+        interfaces = new Type.Class[i.readShort()];
+        for(int j=0; j<interfaces.length; j++) interfaces[j] = (Type.Class)cp.getType(i.readShort());
         int numFields = i.readShort();
         for(int j=0; j<numFields; j++) fields.add(new FieldGen(cp, i));
         int numMethods = i.readShort();
@@ -249,11 +249,11 @@ public class ClassGen implements CGConst {
         @see FieldRef
     */
     public static abstract class FieldOrMethodRef {
-        Type.Object klass;
+        Type.Class klass;
         String name;
         String descriptor;
         
-        FieldOrMethodRef(Type.Object klass, String name, String descriptor) { this.klass = klass; this.name = name; this.descriptor = descriptor; }
+        FieldOrMethodRef(Type.Class klass, String name, String descriptor) { this.klass = klass; this.name = name; this.descriptor = descriptor; }
         FieldOrMethodRef(FieldOrMethodRef o) { this.klass = o.klass; this.name = o.name; this.descriptor = o.descriptor; }
         public boolean equals(Object o_) {
             if(!(o_ instanceof FieldOrMethodRef)) return false;
@@ -334,7 +334,7 @@ public class ClassGen implements CGConst {
             }
         } else {
             /*
-            Type.Object me = new Type.Object("Test");
+            Type.Class me = new Type.Class("Test");
             ClassGen cg = new ClassGen("Test", "java.lang.Object", ACC_PUBLIC|ACC_SUPER|ACC_FINAL);
             FieldGen fg = cg.addField("foo", Type.INT, ACC_PUBLIC|ACC_STATIC);
         
@@ -344,10 +344,10 @@ public class ClassGen implements CGConst {
             //mg.add(ISTORE_0);
             mg.add(PUTSTATIC, fieldRef(me, "foo", Type.INT));
             int top = mg.size();
-            mg.add(GETSTATIC, cg.fieldRef(new Type.Object("java.lang.System"), "out", new Type.Object("java.io.PrintStream")));
+            mg.add(GETSTATIC, cg.fieldRef(new Type.Class("java.lang.System"), "out", new Type.Class("java.io.PrintStream")));
             //mg.add(ILOAD_0);
             mg.add(GETSTATIC, cg.fieldRef(me, "foo", Type.INT));
-            mg.add(INVOKEVIRTUAL, cg.methodRef(new Type.Object("java.io.PrintStream"), "println",
+            mg.add(INVOKEVIRTUAL, cg.methodRef(new Type.Class("java.io.PrintStream"), "println",
                                                Type.VOID, new Type[]{Type.INT}));
             //mg.add(IINC, new int[]{0, 1});
             //mg.add(ILOAD_0);

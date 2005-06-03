@@ -93,12 +93,12 @@ class CPGen {
                     NameAndTypeKey nt = (NameAndTypeKey) e2.key();
                     Type t = Type.fromDescriptor(nt.type);
                     if(t == null) throw new ClassGen.ClassReadExn("invalid type descriptor");
-                    return new FieldRef((Type.Object)e1.key(), nt.name, t);
+                    return new FieldRef((Type.Class)e1.key(), nt.name, t);
                 }
                 case 10: case 11: {
                     NameAndTypeKey nt = (NameAndTypeKey) e2.key();
                     if (e1.key() == null) throw new Error(e1.tag + " => " + e1.key());
-                    return new MethodRef((Type.Object)e1.key(), "methodname", Type.VOID, new Type[0]); // FIXME FIXME
+                    return new MethodRef((Type.Class)e1.key(), "methodname", Type.VOID, new Type[0]); // FIXME FIXME
                 }
                 case 12: {
                     return new NameAndTypeKey(((Utf8Ent)e1).s, ((Utf8Ent)e2).s); 
@@ -190,9 +190,9 @@ class CPGen {
             return ent;
         }
         
-        if(o instanceof Type.Object) {
+        if(o instanceof Type.Class) {
             CPRefEnt ce = new CPRefEnt(this, 7);
-            ce.e1 = addUtf8(((Type.Object)o).internalForm());
+            ce.e1 = addUtf8(((Type.Class)o).internalForm());
             ent = ce;
         } else if(o instanceof String) {
             CPRefEnt ce = new CPRefEnt(this, 8);
