@@ -20,9 +20,7 @@ class ConstantPool {
     public abstract class Ent {
         int n; // this is the refcount if state == OPEN, index if >= STABLE
         int tag;
-        
         Ent(int tag) { this.tag = tag; }
-        
         void dump(DataOutput o) throws IOException { o.writeByte(tag); }
         String debugToString() { return toString(); } // so we can remove this method when not debugging
         abstract Object key() throws ClassFile.ClassReadExn; // be careful using this, it drags in a bunch of code
@@ -41,19 +39,17 @@ class ConstantPool {
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeFloat(f);  }
         Object key() { return new Float(f); }
     }
-    
-    // INVARIANTS: tag == 5 || tag == 6
     class LongEnt extends Ent {
-        long l;
-        LongEnt(int tag) { super(tag); }
+        final long l;
+        LongEnt(long l) { super(5); this.l = l; }
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeLong(l); }
-        Object key() {
-            switch(tag) {
-                case 5: return new Long(l);
-                case 6: return new Double(Double.longBitsToDouble(l));
-                default: throw new Error("should never happen");
-            }
-        }
+        Object key() { return new Long(l); }
+    }
+    class DoubleEnt extends Ent {
+        final double d;
+        DoubleEnt(double d) { super(6); this.d = d; }
+        void dump(DataOutput o) throws IOException { super.dump(o); o.writeDouble(d); }
+        Object key() { return new Double(d); }
     }
     
     /* INVARIANTS:
@@ -197,14 +193,8 @@ class ConstantPool {
             ent = ce;
         } else if(o instanceof Integer) {  ent = new IntEnt(((Integer)o).intValue());
         } else if(o instanceof Float) {    ent = new FloatEnt(((Float)o).floatValue());
-        } else if(o instanceof Long) {
-            LongEnt le = new LongEnt(5);
-            le.l = ((Long)o).longValue();
-            ent = le;
-        } else if(o instanceof Double) {
-            LongEnt le = new LongEnt(6);
-            le.l = Double.doubleToLongBits(((Double)o).doubleValue());
-            ent = le;
+        } else if(o instanceof Long) {     ent = new LongEnt(((Long)o).longValue());
+        } else if(o instanceof Double) {   ent = new DoubleEnt(((Double)o).doubleValue());
         } else if(o instanceof Utf8Key) {
             Utf8Ent ue = new Utf8Ent();
             ue.s = ((Utf8Key)o).s;
