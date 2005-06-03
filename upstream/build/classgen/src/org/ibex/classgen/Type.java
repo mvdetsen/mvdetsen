@@ -33,7 +33,7 @@ public class Type {
     public static Type instance(String d) {
         Type ret = (Type)instances.get(d);
         if (ret != null) return ret;
-        if (d.endsWith("[")) return new Type.Array(instance(d.substring(d.length()-1)));
+        if (d.startsWith("[")) return new Type.Array(instance(d.substring(1)));
         return new Type.Class(d);
     }
 
@@ -42,7 +42,7 @@ public class Type {
     public       int     hashCode() { return descriptor.hashCode(); }
     public       boolean equals(java.lang.Object o) { return this==o; }
 
-    public Type.Array  makeArray() { return (Type.Array)instance(descriptor+"["); }
+    public Type.Array  makeArray() { return (Type.Array)instance("["+descriptor); }
 
     public Type.Ref    asRef()       { throw new RuntimeException("attempted to use "+this+" as a Type.Ref, which it is not"); }
     public Type.Class  asClass()     { throw new RuntimeException("attempted to use "+this+" as a Type.Class, which it is not"); }
@@ -92,10 +92,10 @@ public class Type {
     }    
 
     public static class Array extends Type.Ref {
-        protected Array(Type t) { super(t.getDescriptor() + "[", t.toString() + "[]"); }
+        protected Array(Type t) { super("[" + t.getDescriptor(), t.toString() + "[]"); }
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
-        public int dimension() { return descriptor.length() - descriptor.indexOf('['); }
+        public int dimension() { return getDescriptor().lastIndexOf('['); }
     }
 
 }
