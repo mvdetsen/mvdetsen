@@ -60,21 +60,11 @@ public class Type {
     public int hashCode() { return descriptor.hashCode(); }
     public boolean equals(java.lang.Object o) { return o instanceof Type && ((Type)o).descriptor.equals(descriptor); }
     
-    /** Returns a one dimensional array type for the base type <i>base</i>
-        @param base The base type
-        @return A one dimensional array of the base type
-    */
-    public static Type arrayType(Type base) { return arrayType(base, 1); }
-    /** Returns a <i>dim</i> dimensional array type for the base type <i>base</i>
-        @param base The base type
-        @param dim Number if dimensions
-        @return A one dimensional array of the base type
-    */
-    public static Type arrayType(Type base, int dim) { return new Type.Array(base, dim); }
-
     public String toString() { return getDescriptor(); }
     public Type.Object asObject() { throw new RuntimeException("attempted to use "+this+" as a Type.Object, which it is not"); }
     public Type.Array asArray() { throw new RuntimeException("attempted to use "+this+" as a Type.Array, which it is not"); }
+    public Type.Array makeArray() { return new Type.Array(this); }
+    public Type.Array makeArray(int dim) { return new Type.Array(this, dim); }
     public boolean isObject() { return false; }
     public boolean isArray() { return false; }
 
@@ -104,16 +94,13 @@ public class Type {
             for(int i=0;st.hasMoreTokens();i++) a[i] = st.nextToken();
             return a;
         }
-        
+       
         String internalForm() { return descriptor.substring(1, descriptor.length()-1); }
-        
-        static boolean validDescriptorString(String s) {
-            return s.startsWith("L") && s.endsWith(";");
-        }
     }    
 
     public static class Array extends Object {
         private int dim;
+        protected Array(Type t) { super(_initHelper(t, 1)); this.dim = 1; }
         protected Array(Type t, int dim) { super(_initHelper(t, dim)); this.dim = dim; }
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
