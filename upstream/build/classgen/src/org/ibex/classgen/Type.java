@@ -26,33 +26,34 @@ public class Type {
     final String descriptor;
 
     public String humanReadable() {
-        if(descriptor.equals("V")) return "void";
-        if(descriptor.equals("I")) return "int";
-        if(descriptor.equals("J")) return "long";
-        if(descriptor.equals("Z")) return "boolean";
-        if(descriptor.equals("D")) return "double";
-        if(descriptor.equals("F")) return "float";
-        if(descriptor.equals("B")) return "byte";
-        if(descriptor.equals("C")) return "char";
-        if(descriptor.equals("S")) return "short";
+        if (descriptor.equals("V")) return "void";
+        if (descriptor.equals("I")) return "int";
+        if (descriptor.equals("J")) return "long";
+        if (descriptor.equals("Z")) return "boolean";
+        if (descriptor.equals("D")) return "double";
+        if (descriptor.equals("F")) return "float";
+        if (descriptor.equals("B")) return "byte";
+        if (descriptor.equals("C")) return "char";
+        if (descriptor.equals("S")) return "short";
         throw new Error("confounded by Type("+descriptor+")");
     }
 
     protected Type(String descriptor) { this.descriptor = descriptor; }
     
-    public static Type fromDescriptor(String descriptor) {
-        if(descriptor.equals("V")) return VOID;
-        if(descriptor.equals("I")) return INT;
-        if(descriptor.equals("J")) return LONG;
-        if(descriptor.equals("Z")) return BOOLEAN;
-        if(descriptor.equals("D")) return DOUBLE;
-        if(descriptor.equals("F")) return FLOAT;
-        if(descriptor.equals("B")) return BYTE;
-        if(descriptor.equals("C")) return CHAR;
-        if(descriptor.equals("S")) return SHORT;
-        if(descriptor.endsWith("[")) return new Type.Array(fromDescriptor(descriptor.substring(0, descriptor.indexOf('['))),
-                                                           descriptor.length() - descriptor.indexOf('['));
-        return new Type.Object(descriptor);
+    public static Type fromDescriptor(String d) {
+        if (d.equals("V")) return VOID;
+        if (d.equals("I")) return INT;
+        if (d.equals("J")) return LONG;
+        if (d.equals("Z")) return BOOLEAN;
+        if (d.equals("D")) return DOUBLE;
+        if (d.equals("F")) return FLOAT;
+        if (d.equals("B")) return BYTE;
+        if (d.equals("C")) return CHAR;
+        if (d.equals("S")) return SHORT;
+        if (d.endsWith("["))
+            return new Type.Array(fromDescriptor(d.substring(0, d.indexOf('['))),
+                                  d.length() - d.indexOf('['));
+        return new Type.Object(d);
     }
         
     /** Returns the Java descriptor string for this object ("I", or "Ljava/lang/String", "[[J", etc */
@@ -70,9 +71,6 @@ public class Type {
 
     /** Class representing Object types (any non-primitive type) */
     public static class Object extends Type {
-        /** Create an Type.Object instance for the specified string. <i>s</i> can be a string in the form
-            "java.lang.String", "java/lang/String", or "Ljava/lang/String;".
-            @param s The type */
         protected Object(String s) { super(_initHelper(s)); }
         public Type.Object asObject() { return this; }
         public boolean isObject() { return true; }
@@ -83,7 +81,7 @@ public class Type {
         }
 
         private static String _initHelper(String s) {
-            if(!s.startsWith("L") || !s.endsWith(";")) s = "L" + s.replace('.', '/') + ";";
+            if (!s.startsWith("L") || !s.endsWith(";")) s = "L" + s.replace('.', '/') + ";";
             return s;
         }
 
