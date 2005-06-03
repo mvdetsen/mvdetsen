@@ -182,7 +182,7 @@ public class ClassGen implements CGConst {
         for(int j=0; j<numFields; j++) fields.add(new FieldGen(i));
         int numMethods = i.readShort();
         for(int j=0; j<numMethods; j++) methods.add(new MethodGen(i));
-        attributes = new AttrGen(i);
+        attributes = new AttrGen(cp, i);
     }
     
     /** Thrown when class generation fails for a reason not under the control of the user
@@ -220,11 +220,25 @@ public class ClassGen implements CGConst {
         private final CPGen cp;
         private final Hashtable ht = new Hashtable();
         
-        public AttrGen(DataInput in) {
-            throw new Error("Brian is superlame");
-        }
-        public AttrGen(CPGen cp) {
-            this.cp = cp;
+        public AttrGen(CPGen cp) { this.cp = cp; }
+        public AttrGen(CPGen cp, DataInput in) throws IOException {
+            this(cp);
+            while(true) {
+                String name = null;
+                try {
+                    name = ((CPGen.Utf8Ent)cp.getByIndex(in.readShort())).s;
+                } catch (EOFException _) {
+                    return;
+                }
+                int length = in.readInt();
+                if (length==2) {   // FIXME might be wrong assumption
+                    ht.put(name, cp.getByIndex(in.readShort()));
+                } else {
+                    byte[] buf = new byte[length];
+                    in.readFully(buf);
+                    ht.put(name, buf);
+                }
+            }
         }
         
         public void add(String s, Object data) {
