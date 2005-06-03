@@ -177,7 +177,8 @@ class CPGen {
     public final Ent addNameAndType(String name, String descriptor) { return add(new NameAndTypeKey(name, descriptor)); }
     public final Ent addUtf8(String s) { return add(new Utf8Key(s)); }
     
-    public final Ent add(Object o) {
+    public final Ent add(Object o) { return add(o, false); }
+    public final Ent add(Object o, boolean invokeInterface) {
         if(state == SEALED) throw new IllegalStateException("constant pool is sealed");
             
         Ent ent = get(o);
@@ -216,7 +217,7 @@ class CPGen {
             ent = ce;
         } else if(o instanceof MemberRef) {
             MemberRef key = (MemberRef) o;
-            int tag = o instanceof FieldRef ? 9 : o instanceof MethodRef ? 10 : o instanceof MethodRef.I ? 11 : 0;
+            int tag = invokeInterface ? 11 : o instanceof FieldRef ? 9 : o instanceof MethodRef ? 10 : 0;
             if(tag == 0) throw new Error("should never happen");
             CPRefEnt ce = new CPRefEnt(tag);
             ce.e1 = add(key.klass);

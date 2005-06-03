@@ -28,12 +28,4 @@ public class MethodRef extends MemberRef {
         sb.append(returnType.getDescriptor());
         return sb.toString();
     }
-    
-    /** MethodRef class used for the INVOKEINTERFACE bytecode. Although this contains the same
-        data as a normal MethodRef, these are treated differently in the byte code format. In general,
-        users don't need to be concerned with this though because MethodRef's are automatically converted
-        to MethodRef.I's when they are applied to an INVOKEINTERFACE bytecode */
-    public static class I extends MethodRef {
-        public I(Type.Class c, String name, Type ret, Type[] args) { super(c, name, ret, args); }
-    }
 }

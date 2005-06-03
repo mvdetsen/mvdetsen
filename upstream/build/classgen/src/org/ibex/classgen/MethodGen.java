@@ -272,14 +272,14 @@ public class MethodGen implements CGConst {
                 if(arg instanceof Long || arg instanceof Double) op = LDC2_W;
                 break;
             case INVOKEINTERFACE: {
-                MethodRef mr = (MethodRef)arg;
-                if(arg instanceof MethodRef) arg = new MethodRef.I(mr.klass, mr.name, mr.returnType, mr.argTypes);
                 break;
             }
         }
         int opdata = OP_DATA[op&0xff];
-        if((opdata&OP_CPENT_FLAG) != 0 && !(arg instanceof CPGen.Ent))
-            arg = cp.add(arg);
+        if((opdata&OP_CPENT_FLAG) != 0 && !(arg instanceof CPGen.Ent)) {
+            if (op==INVOKEINTERFACE) arg = cp.add(arg, true);
+            else arg = cp.add(arg);
+        }
         else if((opdata&OP_VALID_FLAG) == 0)
             throw new IllegalArgumentException("unknown bytecode");
         this.op[pos] = op;
