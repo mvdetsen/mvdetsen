@@ -84,7 +84,6 @@ public class Type {
 
         private static String _initHelper(String s) {
             if(!s.startsWith("L") || !s.endsWith(";")) s = "L" + s.replace('.', '/') + ";";
-            if(!validDescriptorString(s)) throw new IllegalArgumentException("invalid descriptor string");
             return s;
         }
 
