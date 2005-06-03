@@ -360,23 +360,22 @@ class ConstantPool {
             if (e instanceof LongEnt) index++;
         }
         
-        for(int index=1;index<usedSlots;index++) {
-            int i = index;
-            Ent e = entriesByIndex[index];
+        for(int i=1;i<usedSlots;i++) {
+            Ent e = entriesByIndex[i];
             if (e == null) throw new Error("should never happen: " + i + "/"+usedSlots);
             if (e instanceof LongEnt) {
-                index++;
+                i++;
                 continue;
             }
             if (!(e instanceof CPRefEnt)) continue;
             CPRefEnt ce = (CPRefEnt) e;
-            if (e1s[i] == 0 || e1s[i] >= usedSlots) throw new ClassFile.ClassReadExn("invalid cp index");
+            if (e1s[i] == 0 || e1s[i] >= usedSlots) throw new ClassFile.ClassReadExn("invalid cp i");
             ce.e1 = entriesByIndex[e1s[i]];
-            if (ce.e1 == null)  throw new ClassFile.ClassReadExn("invalid cp index");
+            if (ce.e1 == null)  throw new ClassFile.ClassReadExn("invalid cp i");
             if (ce.tag != 7 && ce.tag != 8) {
-                if (e2s[i] == 0 || e2s[i] >= usedSlots) throw new ClassFile.ClassReadExn("invalid cp index");
+                if (e2s[i] == 0 || e2s[i] >= usedSlots) throw new ClassFile.ClassReadExn("invalid cp i");
                 ce.e2 = entriesByIndex[e2s[i]];
-                if (ce.e2 == null)  throw new ClassFile.ClassReadExn("invalid cp index");
+                if (ce.e2 == null)  throw new ClassFile.ClassReadExn("invalid cp i");
             }
             switch(ce.tag) {
                 case 7:
