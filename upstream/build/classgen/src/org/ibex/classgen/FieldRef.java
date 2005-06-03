@@ -7,7 +7,7 @@ GETFIELD, PUTFIELD, GETSTATIC, and PUTSTATCI bytecodes
 @see CGConst#GETSTATIC
 @see CGConst#PUTSTATIC
 */
-public class FieldRef extends ClassGen.FieldOrMethodRef {
+public class FieldRef extends MemberRef {
     /** Create a reference to field <i>name</i> of class <i>c</i> with the type <i>t</i>  */    
     public FieldRef(Type.Class c, String name, Type t) { super(c, name, t.getDescriptor()); }
     /** Equivalent to FieldRef(new Type.Class(s), ...)

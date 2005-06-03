@@ -25,7 +25,7 @@ class CPGen {
         
         void dump(DataOutput o) throws IOException { o.writeByte(tag); }
         String debugToString() { return toString(); } // so we can remove this method when not debugging
-        abstract Object key() throws ClassGen.ClassReadExn; // be careful using this, it drags in a bunch of code
+        abstract Object key() throws ClassFile.ClassReadExn; // be careful using this, it drags in a bunch of code
     }
     
     class IntEnt extends Ent {
@@ -81,14 +81,14 @@ class CPGen {
         }
         
         private String fixme() { throw new Error("fixme"); }
-        Object key() throws ClassGen.ClassReadExn {
+        Object key() throws ClassFile.ClassReadExn {
             switch(tag) {
                 case 7: return Type.instance(((Utf8Ent)e1).s);
                 case 8: return (((Utf8Ent)e1).s);
                 case 9: {
                     NameAndTypeKey nt = (NameAndTypeKey) e2.key();
                     Type t = Type.instance(nt.type);
-                    if(t == null) throw new ClassGen.ClassReadExn("invalid type descriptor");
+                    if(t == null) throw new ClassFile.ClassReadExn("invalid type descriptor");
                     return new FieldRef((Type.Class)e1.key(), nt.name, t);
                 }
                 case 10: case 11: {
@@ -160,7 +160,7 @@ class CPGen {
         return ent.n;
     }
 
-    public final Type getType(int index) throws ClassGen.ClassReadExn {
+    public final Type getType(int index) throws ClassFile.ClassReadExn {
         Ent e = getByIndex(index);
         if (e instanceof Utf8Ent) return Type.instance(((Utf8Ent)e).s);
         else return (Type)e.key();
@@ -214,8 +214,8 @@ class CPGen {
             ce.e1 = addUtf8(key.name);
             ce.e2 = addUtf8(key.type);
             ent = ce;
-        } else if(o instanceof ClassGen.FieldOrMethodRef) {
-            ClassGen.FieldOrMethodRef key = (ClassGen.FieldOrMethodRef) o;
+        } else if(o instanceof MemberRef) {
+            MemberRef key = (MemberRef) o;
             int tag = o instanceof FieldRef ? 9 : o instanceof MethodRef ? 10 : o instanceof MethodRef.I ? 11 : 0;
             if(tag == 0) throw new Error("should never happen");
             CPRefEnt ce = new CPRefEnt(tag);
@@ -227,7 +227,7 @@ class CPGen {
         }
         
         int spaces = ent instanceof LongEnt ? 2 : 1;        
-        if(usedSlots + spaces > 65536) throw new ClassGen.Exn("constant pool full");
+        if(usedSlots + spaces > 65536) throw new ClassFile.Exn("constant pool full");
         
         ent.n = state == OPEN ? 1 : usedSlots; // refcount or index
 
@@ -309,9 +309,9 @@ class CPGen {
         }
     }
     
-    CPGen(DataInput in) throws ClassGen.ClassReadExn, IOException {
+    CPGen(DataInput in) throws ClassFile.ClassReadExn, IOException {
         usedSlots = in.readUnsignedShort();
-        if(usedSlots==0) throw new ClassGen.ClassReadExn("invalid used slots");
+        if(usedSlots==0) throw new ClassFile.ClassReadExn("invalid used slots");
         
         // these are to remember the CPRefEnt e1 and e2s we have to fix up
         int[] e1s = new int[usedSlots];
@@ -363,7 +363,7 @@ class CPGen {
                     break;
                 }
                 default:
-                    throw new ClassGen.ClassReadExn("invalid cp ent tag");
+                    throw new ClassFile.ClassReadExn("invalid cp ent tag");
             }
             entriesByIndex[index] = e;
             if (e instanceof LongEnt) index++;
@@ -379,30 +379,30 @@ class CPGen {
             }
             if (!(e instanceof CPRefEnt)) continue;
             CPRefEnt ce = (CPRefEnt) e;
-            if(e1s[i] == 0 || e1s[i] >= usedSlots) throw new ClassGen.ClassReadExn("invalid cp index");
+            if(e1s[i] == 0 || e1s[i] >= usedSlots) throw new ClassFile.ClassReadExn("invalid cp index");
             ce.e1 = entriesByIndex[e1s[i]];
-            if(ce.e1 == null)  throw new ClassGen.ClassReadExn("invalid cp index");
+            if(ce.e1 == null)  throw new ClassFile.ClassReadExn("invalid cp index");
             if(ce.tag != 7 && ce.tag != 8) {
-                if(e2s[i] == 0 || e2s[i] >= usedSlots) throw new ClassGen.ClassReadExn("invalid cp index");
+                if(e2s[i] == 0 || e2s[i] >= usedSlots) throw new ClassFile.ClassReadExn("invalid cp index");
                 ce.e2 = entriesByIndex[e2s[i]];
-                if(ce.e2 == null)  throw new ClassGen.ClassReadExn("invalid cp index");
+                if(ce.e2 == null)  throw new ClassFile.ClassReadExn("invalid cp index");
             }
             switch(ce.tag) {
                 case 7:
                 case 8:
-                    if(!(ce.e1 instanceof Utf8Ent)) throw new ClassGen.ClassReadExn("expected a utf8 ent");
+                    if(!(ce.e1 instanceof Utf8Ent)) throw new ClassFile.ClassReadExn("expected a utf8 ent");
                     break;
                 case 9:
                 case 10:
                 case 11:
                     if(!(ce.e1 instanceof CPRefEnt) || ((CPRefEnt)ce.e1).tag != 7)
-                        throw new ClassGen.ClassReadExn("expected a type ent");
+                        throw new ClassFile.ClassReadExn("expected a type ent");
                     if(!(ce.e2 instanceof CPRefEnt) || ((CPRefEnt)ce.e2).tag != 12)
-                        throw new ClassGen.ClassReadExn("expected a name and type ent");
+                        throw new ClassFile.ClassReadExn("expected a name and type ent");
                     break;
                 case 12:
-                    if(!(ce.e1 instanceof Utf8Ent)) throw new ClassGen.ClassReadExn("expected a utf8 ent");
-                    if(!(ce.e2 instanceof Utf8Ent)) throw new ClassGen.ClassReadExn("expected a utf8 ent");
+                    if(!(ce.e1 instanceof Utf8Ent)) throw new ClassFile.ClassReadExn("expected a utf8 ent");
+                    if(!(ce.e2 instanceof Utf8Ent)) throw new ClassFile.ClassReadExn("expected a utf8 ent");
                     break;
             }
         }

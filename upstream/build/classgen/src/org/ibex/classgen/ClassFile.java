@@ -4,7 +4,7 @@ import java.util.*;
 import java.io.*;
 
 /** Class generation object representing the whole classfile */
-public class ClassGen implements CGConst {
+public class ClassFile implements CGConst {
     private final Type.Class thisType;
     private final Type.Class superType;
     private final Type.Class[] interfaces;
@@ -60,22 +60,22 @@ public class ClassGen implements CGConst {
         sb.append("}");
     }
 
-    /** @see #ClassGen(Type.Class, Type.Class, int) */
-    public ClassGen(String name, String superName, int flags) {
+    /** @see #ClassFile(Type.Class, Type.Class, int) */
+    public ClassFile(String name, String superName, int flags) {
         this(Type.instance(name).asClass(), Type.instance(superName).asClass(), flags);
     }
 
-    /** @see #ClassGen(Type.Class, Type.Class, int, Type.Class[]) */
-    public ClassGen(Type.Class thisType, Type.Class superType, int flags) {
+    /** @see #ClassFile(Type.Class, Type.Class, int, Type.Class[]) */
+    public ClassFile(Type.Class thisType, Type.Class superType, int flags) {
         this(thisType, superType, flags, null);
     }
     
-    /** Creates a new ClassGen object 
+    /** Creates a new ClassFile object 
         @param thisType The type of the class to generate
         @param superType The superclass of the generated class (commonly Type.OBJECT) 
         @param flags The access flags for this class (ACC_PUBLIC, ACC_FINAL, ACC_SUPER, ACC_INTERFACE, and ACC_ABSTRACT)
     */
-    public ClassGen(Type.Class thisType, Type.Class superType, int flags, Type.Class[] interfaces) {
+    public ClassFile(Type.Class thisType, Type.Class superType, int flags, Type.Class[] interfaces) {
         if((flags & ~(ACC_PUBLIC|ACC_FINAL|ACC_SUPER|ACC_INTERFACE|ACC_ABSTRACT)) != 0)
             throw new IllegalArgumentException("invalid flags");
         this.thisType = thisType;
@@ -128,13 +128,13 @@ public class ClassGen implements CGConst {
     public void setSourceFile(String sourceFile) { this.sourceFile = sourceFile; }
     
     /** Writes the classfile data to the file specifed
-        @see ClassGen#dump(OutputStream)
+        @see ClassFile#dump(OutputStream)
     */
     public void dump(String file) throws IOException { dump(new File(file)); }
     
     /** Writes the classfile data to the file specified
         If <i>f</i> is a directory directory components under it are created for the package the class is in (like javac's -d option)
-        @see ClassGen#dump(OutputStream)
+        @see ClassFile#dump(OutputStream)
     */
     public void dump(File f) throws IOException {
         if(f.isDirectory()) {
@@ -200,18 +200,18 @@ public class ClassGen implements CGConst {
         attributes.dump(o); // attributes        
     }
     
-    public ClassGen read(File f) throws ClassReadExn, IOException {
+    public ClassFile read(File f) throws ClassReadExn, IOException {
         InputStream is = new FileInputStream(f);
-        ClassGen ret = read(is);
+        ClassFile ret = read(is);
         is.close();
         return ret;
     }
     
-    public ClassGen read(InputStream is) throws ClassReadExn, IOException {
-        return new ClassGen(new DataInputStream(new BufferedInputStream(is)));
+    public ClassFile read(InputStream is) throws ClassReadExn, IOException {
+        return new ClassFile(new DataInputStream(new BufferedInputStream(is)));
     }
 
-    ClassGen(DataInput i) throws ClassReadExn, IOException {
+    ClassFile(DataInput i) throws ClassReadExn, IOException {
         int magic = i.readInt();
         if (magic != 0xcafebabe) throw new ClassReadExn("invalid magic: " + Long.toString(0xffffffffL & magic, 16));
         minor = i.readShort();
@@ -240,27 +240,6 @@ public class ClassGen implements CGConst {
     
     public static class ClassReadExn extends IOException {
         public ClassReadExn(String s) { super(s); }
-    }
-    
-    /** A class representing a field or method reference. This is used as an argument to the INVOKE*, GET*, and PUT* bytecodes
-        @see MethodRef
-        @see FieldRef
-        @see MethodRef.I
-        @see FieldRef
-    */
-    public static abstract class FieldOrMethodRef {
-        Type.Class klass;
-        String name;
-        String descriptor;
-        
-        FieldOrMethodRef(Type.Class klass, String name, String descriptor) { this.klass = klass; this.name = name; this.descriptor = descriptor; }
-        FieldOrMethodRef(FieldOrMethodRef o) { this.klass = o.klass; this.name = o.name; this.descriptor = o.descriptor; }
-        public boolean equals(Object o_) {
-            if(!(o_ instanceof FieldOrMethodRef)) return false;
-            FieldOrMethodRef o = (FieldOrMethodRef) o_;
-            return o.klass.equals(klass) && o.name.equals(name) && o.descriptor.equals(descriptor);
-        }
-        public int hashCode() { return klass.hashCode() ^ name.hashCode() ^ descriptor.hashCode(); }
     }
     
     static class AttrGen {
@@ -327,15 +306,15 @@ public class ClassGen implements CGConst {
     public static void main(String[] args) throws Exception {
         if (args.length==1) {
             if (args[0].endsWith(".class")) {
-                System.out.println(new ClassGen(new DataInputStream(new FileInputStream(args[0]))));
+                System.out.println(new ClassFile(new DataInputStream(new FileInputStream(args[0]))));
             } else {
                 InputStream is = Class.forName(args[0]).getClassLoader().getResourceAsStream(args[0].replace('.', '/')+".class");
-                System.out.println(new ClassGen(new DataInputStream(is)));
+                System.out.println(new ClassFile(new DataInputStream(is)));
             }
         } else {
             /*
             Type.Class me = new Type.Class("Test");
-            ClassGen cg = new ClassGen("Test", "java.lang.Object", ACC_PUBLIC|ACC_SUPER|ACC_FINAL);
+            ClassFile cg = new ClassFile("Test", "java.lang.Object", ACC_PUBLIC|ACC_SUPER|ACC_FINAL);
             FieldGen fg = cg.addField("foo", Type.INT, ACC_PUBLIC|ACC_STATIC);
         
             MethodGen mg = cg.addMethod("main", Type.VOID, new Type[]{Type.arrayType(Type.STRING)}, ACC_STATIC|ACC_PUBLIC);

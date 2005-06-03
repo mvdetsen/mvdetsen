@@ -7,7 +7,7 @@ package org.ibex.classgen;
     @see CGConst#INVOKESPECIAL
     @see CGConst#INVOKEINTERFACE
 */
-public class MethodRef extends ClassGen.FieldOrMethodRef {
+public class MethodRef extends MemberRef {
     /** Create a reference to method <i>name</i> of class <i>c</i> with the return type <i>ret</i> and the
         arguments <i>args</i> */
     public MethodRef(Type.Class c, String name, Type ret, Type[] args) {
