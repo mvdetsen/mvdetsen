@@ -87,11 +87,11 @@ class CPGen {
         private String fixme() { throw new Error("fixme"); }
         Object key() throws ClassGen.ClassReadExn {
             switch(tag) {
-                case 7: return Type.fromDescriptor(((Utf8Ent)e1).s);
+                case 7: return Type.instance(((Utf8Ent)e1).s);
                 case 8: return (((Utf8Ent)e1).s);
                 case 9: {
                     NameAndTypeKey nt = (NameAndTypeKey) e2.key();
-                    Type t = Type.fromDescriptor(nt.type);
+                    Type t = Type.instance(nt.type);
                     if(t == null) throw new ClassGen.ClassReadExn("invalid type descriptor");
                     return new FieldRef((Type.Class)e1.key(), nt.name, t);
                 }
@@ -166,7 +166,7 @@ class CPGen {
 
     public final Type getType(int index) throws ClassGen.ClassReadExn {
         Ent e = getByIndex(index);
-        if (e instanceof Utf8Ent) return Type.fromDescriptor(((Utf8Ent)e).s);
+        if (e instanceof Utf8Ent) return Type.instance(((Utf8Ent)e).s);
         else return (Type)e.key();
     }
 

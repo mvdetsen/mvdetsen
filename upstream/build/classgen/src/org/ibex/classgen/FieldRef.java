@@ -13,5 +13,5 @@ public class FieldRef extends ClassGen.FieldOrMethodRef {
     /** Equivalent to FieldRef(new Type.Class(s), ...)
         @see #FieldRef(Type.Class, String, Type, )
     */
-    public FieldRef(String s, String name, Type t) { this(Type.fromDescriptor(s).asClass(), name, t); }
+    public FieldRef(String s, String name, Type t) { this(Type.instance(s).asClass(), name, t); }
 }

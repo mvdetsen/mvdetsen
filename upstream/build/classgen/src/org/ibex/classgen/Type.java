@@ -30,10 +30,10 @@ public class Type {
     public static final Type[] NO_ARGS = new Type[0];
     
     /** guarantee: there will only be one instance of Type for a given descriptor ==> equals() and == are interchangeable */
-    public static Type fromDescriptor(String d) {
+    public static Type instance(String d) {
         Type ret = (Type)instances.get(d);
         if (ret != null) return ret;
-        if (d.endsWith("[")) return new Type.Array(fromDescriptor(d.substring(d.length()-1)));
+        if (d.endsWith("[")) return new Type.Array(instance(d.substring(d.length()-1)));
         return new Type.Class(d);
     }
 
@@ -42,7 +42,7 @@ public class Type {
     public       int     hashCode() { return descriptor.hashCode(); }
     public       boolean equals(java.lang.Object o) { return this==o; }
 
-    public Type.Array  makeArray() { return (Type.Array)fromDescriptor(descriptor+"["); }
+    public Type.Array  makeArray() { return (Type.Array)instance(descriptor+"["); }
 
     public Type.Ref    asRef()       { throw new RuntimeException("attempted to use "+this+" as a Type.Ref, which it is not"); }
     public Type.Class  asClass()     { throw new RuntimeException("attempted to use "+this+" as a Type.Class, which it is not"); }

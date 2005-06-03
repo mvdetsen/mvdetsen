@@ -52,7 +52,7 @@ public class MethodGen implements CGConst {
         name = cp.getUtf8ByIndex(in.readShort());
         String descriptor = cp.getUtf8ByIndex(in.readShort());
         String ret = descriptor.substring(descriptor.indexOf(')')+1);
-        this.ret = Type.fromDescriptor(ret);
+        this.ret = Type.instance(ret);
         //String args = descriptor.substring(1, descriptor.indexOf(')'));
         args = new Type[0]; // FIXME
         codeAttrs = null;
