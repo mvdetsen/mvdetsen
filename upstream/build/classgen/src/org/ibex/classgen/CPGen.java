@@ -20,12 +20,11 @@ class CPGen {
     /*
      * Entries 
      */
-    public abstract static class Ent {
-        CPGen owner; // don't need this yet, but we will to implement ref() and unref()
+    public abstract class Ent {
         int n; // this is the refcount if state == OPEN, index if >= STABLE
         int tag;
         
-        Ent(CPGen owner, int tag) { this.owner = owner; this.tag = tag; }
+        Ent(int tag) { this.tag = tag; }
         
         void dump(DataOutput o) throws IOException { o.writeByte(tag); }
         String debugToString() { return toString(); } // so we can remove this method when not debugging
@@ -33,9 +32,9 @@ class CPGen {
     }
     
     // INVARIANTS: tag == 3 || tag == 4
-    static class IntEnt extends Ent {
+    class IntEnt extends Ent {
         int i;
-        IntEnt(CPGen owner, int tag) { super(owner, tag); }
+        IntEnt(int tag) { super(tag); }
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeInt(i);  }
         Object key() {
             switch(tag) {
@@ -47,9 +46,9 @@ class CPGen {
     }
     
     // INVARIANTS: tag == 5 || tag == 6
-    static class LongEnt extends Ent {
+    class LongEnt extends Ent {
         long l;
-        LongEnt(CPGen owner, int tag) { super(owner, tag); }
+        LongEnt(int tag) { super(tag); }
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeLong(l); }
         Object key() {
             switch(tag) {
@@ -71,10 +70,10 @@ class CPGen {
             e0 instanceof Utf8Ent
         }
     */
-    static class CPRefEnt extends Ent {
+    class CPRefEnt extends Ent {
         Ent e1;
         Ent e2;
-        CPRefEnt(CPGen owner, int tag) { super(owner, tag); }
+        CPRefEnt(int tag) { super(tag); }
         
         String debugToString() { return "[" + e1.n + ":" + e1.debugToString() + (e2 == null ? "" : " + " + e2.n + ":" + e2.debugToString()) + "]"; }
         
@@ -108,9 +107,9 @@ class CPGen {
         }
     }
         
-    static class Utf8Ent extends Ent {
+    class Utf8Ent extends Ent {
         String s;
-        Utf8Ent(CPGen owner) { super(owner, 1); }
+        Utf8Ent() { super(1); }
         String debugToString() { return s; }
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeUTF(s); }
         Object key() {
@@ -191,35 +190,35 @@ class CPGen {
         }
         
         if(o instanceof Type.Class) {
-            CPRefEnt ce = new CPRefEnt(this, 7);
+            CPRefEnt ce = new CPRefEnt(7);
             ce.e1 = addUtf8(((Type.Class)o).internalForm());
             ent = ce;
         } else if(o instanceof String) {
-            CPRefEnt ce = new CPRefEnt(this, 8);
+            CPRefEnt ce = new CPRefEnt(8);
             ce.e1 = addUtf8((String)o);
             ent = ce;
         } else if(o instanceof Integer) {
-            IntEnt ue = new IntEnt(this, 3);
+            IntEnt ue = new IntEnt(3);
             ue.i = ((Integer)o).intValue();
             ent = ue;
         } else if(o instanceof Float) {
-            IntEnt ue = new IntEnt(this, 4);
+            IntEnt ue = new IntEnt(4);
             ue.i = Float.floatToIntBits(((Float)o).floatValue());
             ent = ue;
         } else if(o instanceof Long) {
-            LongEnt le = new LongEnt(this, 5);
+            LongEnt le = new LongEnt(5);
             le.l = ((Long)o).longValue();
             ent = le;
         } else if(o instanceof Double) {
-            LongEnt le = new LongEnt(this, 6);
+            LongEnt le = new LongEnt(6);
             le.l = Double.doubleToLongBits(((Double)o).doubleValue());
             ent = le;
         } else if(o instanceof Utf8Key) {
-            Utf8Ent ue = new Utf8Ent(this);
+            Utf8Ent ue = new Utf8Ent();
             ue.s = ((Utf8Key)o).s;
             ent = ue;
         } else if(o instanceof NameAndTypeKey) {
-            CPRefEnt ce = new CPRefEnt(this, 12);
+            CPRefEnt ce = new CPRefEnt(12);
             NameAndTypeKey key = (NameAndTypeKey) o;
             ce.e1 = addUtf8(key.name);
             ce.e2 = addUtf8(key.type);
@@ -228,7 +227,7 @@ class CPGen {
             ClassGen.FieldOrMethodRef key = (ClassGen.FieldOrMethodRef) o;
             int tag = o instanceof FieldRef ? 9 : o instanceof MethodRef ? 10 : o instanceof MethodRef.I ? 11 : 0;
             if(tag == 0) throw new Error("should never happen");
-            CPRefEnt ce = new CPRefEnt(this, tag);
+            CPRefEnt ce = new CPRefEnt(tag);
             ce.e1 = add(key.klass);
             ce.e2 = addNameAndType(key.name, key.descriptor);
             ent = ce;
@@ -340,7 +339,7 @@ class CPGen {
                 case 11: // Instance Method Ref
                 case 12: // NameAndType
                 {
-                    e = new CPRefEnt(this, tag);
+                    e = new CPRefEnt(tag);
                     e1s[index] = in.readUnsignedShort();
                     if(tag != 7 && tag != 8) e2s[index] = in.readUnsignedShort();
                     break;
@@ -349,7 +348,7 @@ class CPGen {
                 case 4: // Float
                 {
                     IntEnt ie;
-                    e = ie = new IntEnt(this, tag);
+                    e = ie = new IntEnt(tag);
                     ie.i = in.readInt();
                     break;
                 }
@@ -357,14 +356,14 @@ class CPGen {
                 case 6: // Double
                 {
                     LongEnt le;
-                    e = le = new LongEnt(this, tag);
+                    e = le = new LongEnt(tag);
                     le.l = in.readLong();
                     break;
                 }
                 case 1: // Utf8
                 {
                     Utf8Ent ue;
-                    e = ue = new Utf8Ent(this);
+                    e = ue = new Utf8Ent();
                     ue.s = in.readUTF();
                     break;
                 }
