@@ -80,7 +80,7 @@ public class MethodGen implements CGConst {
     }
     
     /** Returns the descriptor string for this method */
-    public String getDescriptor() { return MethodRef.getDescriptor(ret, args); }
+    public String getDescriptor() { return new MethodRef(null, name, ret, args).getDescriptor(); }
     
     private class ExnTableEnt {
         public int start;
@@ -271,9 +271,11 @@ public class MethodGen implements CGConst {
                 
                 if(arg instanceof Long || arg instanceof Double) op = LDC2_W;
                 break;
-            case INVOKEINTERFACE:
-                if(arg instanceof MethodRef) arg = new MethodRef.I((MethodRef)arg);
+            case INVOKEINTERFACE: {
+                MethodRef mr = (MethodRef)arg;
+                if(arg instanceof MethodRef) arg = new MethodRef.I(mr.klass, mr.name, mr.returnType, mr.argTypes);
                 break;
+            }
         }
         int opdata = OP_DATA[op&0xff];
         if((opdata&OP_CPENT_FLAG) != 0 && !(arg instanceof CPGen.Ent))

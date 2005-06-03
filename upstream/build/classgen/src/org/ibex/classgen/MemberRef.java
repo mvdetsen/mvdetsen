@@ -10,17 +10,19 @@ import java.io.*;
     @see FieldRef
 */
 public abstract class MemberRef {
-    Type.Class klass;
-    String name;
-    String descriptor;
+    public final Type.Class klass;
+    public final String name;
         
-    MemberRef(Type.Class klass, String name, String descriptor) { this.klass = klass; this.name = name; this.descriptor = descriptor; }
-    MemberRef(MemberRef o) { this.klass = o.klass; this.name = o.name; this.descriptor = o.descriptor; }
+    MemberRef(Type.Class klass, String name) {
+        this.klass = klass;
+        this.name = name;
+    }
+    public abstract String getDescriptor();
     public boolean equals(Object o_) {
         if(!(o_ instanceof MemberRef)) return false;
         MemberRef o = (MemberRef) o_;
-        return o.klass.equals(klass) && o.name.equals(name) && o.descriptor.equals(descriptor);
+        return o.klass.equals(klass) && o.name.equals(name) && o.getDescriptor().equals(getDescriptor());
     }
-    public int hashCode() { return klass.hashCode() ^ name.hashCode() ^ descriptor.hashCode(); }
+    public int hashCode() { return klass.hashCode() ^ name.hashCode() ^ getDescriptor().hashCode(); }
 }
     

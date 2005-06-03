@@ -220,7 +220,7 @@ class CPGen {
             if(tag == 0) throw new Error("should never happen");
             CPRefEnt ce = new CPRefEnt(tag);
             ce.e1 = add(key.klass);
-            ce.e2 = addNameAndType(key.name, key.descriptor);
+            ce.e2 = addNameAndType(key.name, key.getDescriptor());
             ent = ce;
         } else {
             throw new IllegalArgumentException("Unknown type passed to add");

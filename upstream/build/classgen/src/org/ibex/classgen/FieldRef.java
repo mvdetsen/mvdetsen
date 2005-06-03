@@ -9,9 +9,8 @@ GETFIELD, PUTFIELD, GETSTATIC, and PUTSTATCI bytecodes
 */
 public class FieldRef extends MemberRef {
     /** Create a reference to field <i>name</i> of class <i>c</i> with the type <i>t</i>  */    
-    public FieldRef(Type.Class c, String name, Type t) { super(c, name, t.getDescriptor()); }
-    /** Equivalent to FieldRef(new Type.Class(s), ...)
-        @see #FieldRef(Type.Class, String, Type, )
-    */
-    public FieldRef(String s, String name, Type t) { this(Type.instance(s).asClass(), name, t); }
+    public final Type type;
+    public FieldRef(Type.Class c, String name, Type t) { super(c, name); this.type = t; }
+    public String getDescriptor() { return name; }
 }
+

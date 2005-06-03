@@ -8,25 +8,24 @@ package org.ibex.classgen;
     @see CGConst#INVOKEINTERFACE
 */
 public class MethodRef extends MemberRef {
+    
+    final Type[] argTypes;
+    final Type   returnType;
+
     /** Create a reference to method <i>name</i> of class <i>c</i> with the return type <i>ret</i> and the
         arguments <i>args</i> */
-    public MethodRef(Type.Class c, String name, Type ret, Type[] args) {
-        super(c, name, getDescriptor(ret, args));
+    public MethodRef(Type.Class c, String name, Type returnType, Type[] argTypes) {
+        super(c, name);
+        this.argTypes = argTypes;
+        this.returnType = returnType;
     }
-    /** Equivalent to MethodRef(new Type.Class(s), ...)
-        @see #MethodRef(Type.Class, String, Type, Type[])
-    */
-    public MethodRef(String s, String name, Type ret, Type[] args) {
-        this(Type.instance(s).asClass(), name, ret, args);
-    }
-    MethodRef(MethodRef i) { super(i); }
     
-    static String getDescriptor(Type ret, Type[] args) {
-        StringBuffer sb = new StringBuffer(args.length*4);
+    public String getDescriptor() {
+        StringBuffer sb = new StringBuffer(argTypes.length*4);
         sb.append("(");
-        for(int i=0;i<args.length;i++) sb.append(args[i].getDescriptor());
+        for(int i=0;i<argTypes.length;i++) sb.append(argTypes[i].getDescriptor());
         sb.append(")");
-        sb.append(ret.getDescriptor());
+        sb.append(returnType.getDescriptor());
         return sb.toString();
     }
     
@@ -36,7 +35,5 @@ public class MethodRef extends MemberRef {
         to MethodRef.I's when they are applied to an INVOKEINTERFACE bytecode */
     public static class I extends MethodRef {
         public I(Type.Class c, String name, Type ret, Type[] args) { super(c, name, ret, args); }
-        public I(String s, String name, Type ret, Type[] args) { super(s, name, ret, args); }
-        I(MethodRef m) { super(m); }
     }
 }
