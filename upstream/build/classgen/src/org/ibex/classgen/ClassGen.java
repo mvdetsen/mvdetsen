@@ -39,10 +39,10 @@ public class ClassGen implements CGConst {
     public void   toString(StringBuffer sb) {
         sb.append(flagsToString(flags));
         sb.append((flags & ACC_INTERFACE) != 0 ? "interface " : "class ");
-        sb.append(thisType.humanReadable());
-        if (superType != null) sb.append(" extends " + superType.humanReadable());
+        sb.append(thisType);
+        if (superType != null) sb.append(" extends " + superType);
         if (interfaces != null && interfaces.length > 0) sb.append(" implements");
-        for(int i=0; i<interfaces.length; i++) sb.append((i==0?" ":", ")+interfaces[i].humanReadable());
+        for(int i=0; i<interfaces.length; i++) sb.append((i==0?" ":", ")+interfaces[i]);
         sb.append(" {");
         sb.append(" // [jcf v"+major+"."+minor+"]");
         if (sourceFile != null) sb.append(" from " + sourceFile);

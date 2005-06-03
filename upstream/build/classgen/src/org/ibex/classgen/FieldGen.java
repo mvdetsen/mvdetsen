@@ -16,7 +16,7 @@ public class FieldGen implements CGConst {
     public String toString() { StringBuffer sb = new StringBuffer(); toString(sb); return sb.toString(); }
     public void   toString(StringBuffer sb) {
         sb.append(ClassGen.flagsToString(flags));
-        sb.append(type.humanReadable());
+        sb.append(type);
         sb.append(" ");
         sb.append(name);
         sb.append(";");

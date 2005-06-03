@@ -29,7 +29,7 @@ public class MethodGen implements CGConst {
     public String toString() { StringBuffer sb = new StringBuffer(); toString(sb, "<init>"); return sb.toString(); }
     public void   toString(StringBuffer sb, String constructorName) {
         sb.append(ClassGen.flagsToString(flags));
-        sb.append(ret.humanReadable());
+        sb.append(ret);
         sb.append(" ");
 
         if (name.equals("<clinit>")) sb.append("static ");
@@ -38,7 +38,7 @@ public class MethodGen implements CGConst {
             else sb.append(name);
             sb.append("(");
             for(int i=0; i<args.length; i++)
-                sb.append((i==0?"":", ")+args[i].humanReadable());
+                sb.append((i==0?"":", ")+args[i]);
             sb.append(") ");
         }
         sb.append("{");

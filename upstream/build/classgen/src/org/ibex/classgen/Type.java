@@ -1,17 +1,23 @@
 package org.ibex.classgen;
 
 import java.util.StringTokenizer;
+import java.util.Hashtable;
 
 public class Type {
-    public static final Type VOID = new Type("V");
-    public static final Type INT = new Type("I");
-    public static final Type LONG = new Type("J");
-    public static final Type BOOLEAN = new Type("Z");
-    public static final Type DOUBLE = new Type("D");
-    public static final Type FLOAT = new Type("F");
-    public static final Type BYTE = new Type("B");
-    public static final Type CHAR = new Type("C");
-    public static final Type SHORT = new Type("S");
+
+    private static Hashtable instances = new Hashtable();  // this has to appear at the top of the file
+
+    // Public API //////////////////////////////////////////////////////////////////////////////
+
+    public static final Type VOID = new Type("V", "void");
+    public static final Type INT = new Type("I", "int");
+    public static final Type LONG = new Type("J", "long");
+    public static final Type BOOLEAN = new Type("Z", "boolean");
+    public static final Type DOUBLE = new Type("D", "double");
+    public static final Type FLOAT = new Type("F", "float");
+    public static final Type BYTE = new Type("B", "byte");
+    public static final Type CHAR = new Type("C", "char");
+    public static final Type SHORT = new Type("S", "short");
     
     public static final Type.Object OBJECT = new Type.Object("java.lang.Object");
     public static final Type.Object STRING = new Type.Object("java.lang.String");
@@ -23,97 +29,65 @@ public class Type {
     /** A zero element Type[] array (can be passed as the "args" param when a method takes no arguments */
     public static final Type[] NO_ARGS = new Type[0];
     
-    final String descriptor;
-
-    public String humanReadable() {
-        if (descriptor.equals("V")) return "void";
-        if (descriptor.equals("I")) return "int";
-        if (descriptor.equals("J")) return "long";
-        if (descriptor.equals("Z")) return "boolean";
-        if (descriptor.equals("D")) return "double";
-        if (descriptor.equals("F")) return "float";
-        if (descriptor.equals("B")) return "byte";
-        if (descriptor.equals("C")) return "char";
-        if (descriptor.equals("S")) return "short";
-        throw new Error("confounded by Type("+descriptor+")");
-    }
-
-    protected Type(String descriptor) { this.descriptor = descriptor; }
-    
+    /** guarantee: there will only be one instance of Type for a given descriptor ==> equals() and == are interchangeable */
     public static Type fromDescriptor(String d) {
-        if (d.equals("V")) return VOID;
-        if (d.equals("I")) return INT;
-        if (d.equals("J")) return LONG;
-        if (d.equals("Z")) return BOOLEAN;
-        if (d.equals("D")) return DOUBLE;
-        if (d.equals("F")) return FLOAT;
-        if (d.equals("B")) return BYTE;
-        if (d.equals("C")) return CHAR;
-        if (d.equals("S")) return SHORT;
-        if (d.endsWith("["))
-            return new Type.Array(fromDescriptor(d.substring(0, d.indexOf('['))),
-                                  d.length() - d.indexOf('['));
+        Type ret = (Type)instances.get(d);
+        if (ret != null) return ret;
+        if (d.endsWith("[")) return new Type.Array(fromDescriptor(d.substring(d.length()-1)));
         return new Type.Object(d);
     }
-        
-    /** Returns the Java descriptor string for this object ("I", or "Ljava/lang/String", "[[J", etc */
-    public final String getDescriptor() { return descriptor; }
-    public int hashCode() { return descriptor.hashCode(); }
-    public boolean equals(java.lang.Object o) { return o instanceof Type && ((Type)o).descriptor.equals(descriptor); }
-    
-    public String toString() { return getDescriptor(); }
+
+    public       String  toString() { return toString; }
+    public final String  getDescriptor() { return descriptor; }
+    public       int     hashCode() { return descriptor.hashCode(); }
+    public       boolean equals(java.lang.Object o) { return this==o; }
+
     public Type.Object asObject() { throw new RuntimeException("attempted to use "+this+" as a Type.Object, which it is not"); }
-    public Type.Array asArray() { throw new RuntimeException("attempted to use "+this+" as a Type.Array, which it is not"); }
-    public Type.Array makeArray() { return new Type.Array(this); }
-    public Type.Array makeArray(int dim) { return new Type.Array(this, dim); }
-    public boolean isObject() { return false; }
-    public boolean isArray() { return false; }
+    public Type.Array  asArray() { throw new RuntimeException("attempted to use "+this+" as a Type.Array, which it is not"); }
+    public Type.Array  makeArray() { return new Type.Array(this); }
+    public boolean     isObject() { return false; }
+    public boolean     isArray() { return false; }
+
+    // Protected/Private //////////////////////////////////////////////////////////////////////////////
+
+    protected final String descriptor;
+    protected final String toString;
+    protected Type(String descriptor) { this(descriptor, descriptor); }
+    protected Type(String descriptor, String humanReadable) {
+        this.toString = humanReadable;
+        instances.put(this.descriptor = descriptor, this);
+    }
 
     /** Class representing Object types (any non-primitive type) */
     public static class Object extends Type {
-        protected Object(String s) { super(_initHelper(s)); }
+        protected Object(String s) { super(_initHelper(s), _initHelper2(s)); }
+        protected Object(String descriptor, String hr) { super(_initHelper(descriptor), _initHelper2(hr)); }
         public Type.Object asObject() { return this; }
         public boolean isObject() { return true; }
-        public String humanReadable() { return internalForm().replace('/', '.'); }
-        public String getShortName() {
-            String hr = humanReadable();
-            return hr.substring(hr.lastIndexOf('.')+1);
-        }
-
+        public String getShortName() { return toString.substring(toString.lastIndexOf('.')+1); }
+        String internalForm() { return descriptor.substring(1, descriptor.length()-1); }
         private static String _initHelper(String s) {
             if (!s.startsWith("L") || !s.endsWith(";")) s = "L" + s.replace('.', '/') + ";";
             return s;
         }
-
+        private static String _initHelper2(String s) {
+            if (s.startsWith("L") && s.endsWith(";")) s = s.substring(1, s.length()-1);
+            return s.replace('/', '.');
+        }
         String[] components() {
             StringTokenizer st = new StringTokenizer(descriptor.substring(1, descriptor.length()-1), "/");
             String[] a = new String[st.countTokens()];
             for(int i=0;st.hasMoreTokens();i++) a[i] = st.nextToken();
             return a;
         }
-       
-        String internalForm() { return descriptor.substring(1, descriptor.length()-1); }
     }    
 
-    public static class Array extends Object {
-        private int dim;
-        protected Array(Type t) { super(_initHelper(t, 1)); this.dim = 1; }
-        protected Array(Type t, int dim) { super(_initHelper(t, dim)); this.dim = dim; }
+    public static class Array extends Type.Object {
+        protected Array(Type t) { super(t.getDescriptor() + "[", t.toString() + "[]"); }
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
-        public String humanReadable() { 
-            String ret = super.internalForm().replace('/', '.');
-            for(int i=0; i<dim; i++) ret += "[]";
-            return ret;
-        }
-        String internalForm() { throw new Error("Type.Array does not have an internalForm()"); }
+        public int dimension() { return descriptor.length() - descriptor.indexOf('['); }
         String[] components() { throw new Error("Type.Array does not have components()"); }
-        private static String _initHelper(Type t, int dim) {
-            StringBuffer sb = new StringBuffer(t.descriptor.length() + dim);
-            for(int i=0;i<dim;i++) sb.append("[");
-            sb.append(t.descriptor);
-            return sb.toString();
-        }
     }
 
 }
