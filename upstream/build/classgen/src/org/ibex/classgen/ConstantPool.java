@@ -54,12 +54,12 @@ class ConstantPool {
     
     /* INVARIANTS:
         tag >= 7 && tag <= 12
-        if(tag == 7 || tag == 8) e0 instanceof Utf8Ent
-        if(tag == 9 || tag == 10 || tag == 11) {
+        if (tag == 7 || tag == 8) e0 instanceof Utf8Ent
+        if (tag == 9 || tag == 10 || tag == 11) {
             e0 instanceof CPRefEnt && e0.tag == 7
             e1 instanceof CPRefEnt && e0.tag == 12
         }
-        if(tag == 12) {
+        if (tag == 12) {
             e0 instanceof Utf8Ent
         }
     */
@@ -73,7 +73,7 @@ class ConstantPool {
         void dump(DataOutput o) throws IOException {
             super.dump(o);
             o.writeShort(e1.n);
-            if(e2 != null) o.writeShort(e2.n);
+            if (e2 != null) o.writeShort(e2.n);
         }
         
         private String fixme() { throw new Error("fixme"); }
@@ -84,7 +84,7 @@ class ConstantPool {
                 case 9: {
                     NameAndTypeKey nt = (NameAndTypeKey) e2.key();
                     Type t = Type.instance(nt.type);
-                    if(t == null) throw new ClassFile.ClassReadExn("invalid type descriptor");
+                    if (t == null) throw new ClassFile.ClassReadExn("invalid type descriptor");
                     return ((Type.Class)e1.key()).field(nt.name, t);
                 }
                 case 10: case 11: {
@@ -125,7 +125,7 @@ class ConstantPool {
         String type;
         NameAndTypeKey(String name, String type) { this.name = name; this.type = type; }
         public boolean equals(Object o_) {
-            if(!(o_ instanceof NameAndTypeKey)) return false;
+            if (!(o_ instanceof NameAndTypeKey)) return false;
             NameAndTypeKey o = (NameAndTypeKey) o_;
             return o.name.equals(name) && o.type.equals(type);
         }
@@ -140,7 +140,7 @@ class ConstantPool {
     public final Ent getUtf8(String s) { return get(new Utf8Key(s)); }
     public final int getIndex(Object o) {
         Ent e = get(o);
-        if(e == null) throw new IllegalStateException("entry not found");
+        if (e == null) throw new IllegalStateException("entry not found");
         return getIndex(e);
     }
     public final String getUtf8ByIndex(int i) {
@@ -148,11 +148,11 @@ class ConstantPool {
     }
     public final int getUtf8Index(String s) {
         Ent e = getUtf8(s);
-        if(e == null) throw new IllegalStateException("entry not found");
+        if (e == null) throw new IllegalStateException("entry not found");
         return getIndex(e);
     }
     public final int getIndex(Ent ent) {
-        if(state < STABLE) throw new IllegalStateException("constant pool is not stable");
+        if (state < STABLE) throw new IllegalStateException("constant pool is not stable");
         return ent.n;
     }
 
@@ -163,9 +163,9 @@ class ConstantPool {
     }
 
     public final Ent getByIndex(int index) {
-        if(state < STABLE) throw new IllegalStateException("constant pool is not stable");
+        if (state < STABLE) throw new IllegalStateException("constant pool is not stable");
         Ent e;
-        if(index >= 65536 || index >= entriesByIndex.length || (e = entriesByIndex[index]) == null) 
+        if (index >= 65536 || index >= entriesByIndex.length || (e = entriesByIndex[index]) == null) 
             throw new IllegalStateException("invalid cp index");
         return e;
     }
@@ -175,40 +175,40 @@ class ConstantPool {
     
     public final Ent add(Object o) { return add(o, false); }
     public final Ent add(Object o, boolean invokeInterface) {
-        if(state == SEALED) throw new IllegalStateException("constant pool is sealed");
+        if (state == SEALED) throw new IllegalStateException("constant pool is sealed");
             
         Ent ent = get(o);
-        if(ent != null) {
-            if(state == OPEN) ent.n++;
+        if (ent != null) {
+            if (state == OPEN) ent.n++;
             return ent;
         }
         
-        if(o instanceof Type.Class) {
+        if (o instanceof Type.Class) {
             CPRefEnt ce = new CPRefEnt(7);
             ce.e1 = addUtf8(((Type.Class)o).internalForm());
             ent = ce;
-        } else if(o instanceof String) {
+        } else if (o instanceof String) {
             CPRefEnt ce = new CPRefEnt(8);
             ce.e1 = addUtf8((String)o);
             ent = ce;
-        } else if(o instanceof Integer) {  ent = new IntEnt(((Integer)o).intValue());
-        } else if(o instanceof Float) {    ent = new FloatEnt(((Float)o).floatValue());
-        } else if(o instanceof Long) {     ent = new LongEnt(((Long)o).longValue());
-        } else if(o instanceof Double) {   ent = new DoubleEnt(((Double)o).doubleValue());
-        } else if(o instanceof Utf8Key) {
+        } else if (o instanceof Integer) {  ent = new IntEnt(((Integer)o).intValue());
+        } else if (o instanceof Float) {    ent = new FloatEnt(((Float)o).floatValue());
+        } else if (o instanceof Long) {     ent = new LongEnt(((Long)o).longValue());
+        } else if (o instanceof Double) {   ent = new DoubleEnt(((Double)o).doubleValue());
+        } else if (o instanceof Utf8Key) {
             Utf8Ent ue = new Utf8Ent();
             ue.s = ((Utf8Key)o).s;
             ent = ue;
-        } else if(o instanceof NameAndTypeKey) {
+        } else if (o instanceof NameAndTypeKey) {
             CPRefEnt ce = new CPRefEnt(12);
             NameAndTypeKey key = (NameAndTypeKey) o;
             ce.e1 = addUtf8(key.name);
             ce.e2 = addUtf8(key.type);
             ent = ce;
-        } else if(o instanceof Type.Class.Member) {
+        } else if (o instanceof Type.Class.Member) {
             Type.Class.Member key = (Type.Class.Member) o;
             int tag = invokeInterface ? 11 : o instanceof Type.Class.Field ? 9 : o instanceof Type.Class.Method ? 10 : 0;
-            if(tag == 0) throw new Error("should never happen");
+            if (tag == 0) throw new Error("should never happen");
             CPRefEnt ce = new CPRefEnt(tag);
             ce.e1 = add(key.getDeclaringClass());
             ce.e2 = addNameAndType(key.name, key.getDescriptor());
@@ -218,7 +218,7 @@ class ConstantPool {
         }
         
         int spaces = ent instanceof LongEnt ? 2 : 1;        
-        if(usedSlots + spaces > 65536) throw new ClassFile.Exn("constant pool full");
+        if (usedSlots + spaces > 65536) throw new ClassFile.Exn("constant pool full");
         
         ent.n = state == OPEN ? 1 : usedSlots; // refcount or index
 
@@ -238,7 +238,7 @@ class ConstantPool {
         int i=0;
         Enumeration e = entries.keys();
         while(e.hasMoreElements()) ents[i++] = (Ent) entries.get(e.nextElement());
-        if(i != count) throw new Error("should never happen");
+        if (i != count) throw new Error("should never happen");
         return ents;
     }
     
@@ -254,7 +254,7 @@ class ConstantPool {
     }
         
     public void stable() {
-        if(state != OPEN) return;
+        if (state != OPEN) return;
         state = STABLE;
         assignIndex(asArray());
     } 
@@ -272,7 +272,7 @@ class ConstantPool {
     };
     
     public void optimize() {
-        if(state != OPEN) throw new IllegalStateException("can't optimize a stable constant pool");
+        if (state != OPEN) throw new IllegalStateException("can't optimize a stable constant pool");
         Ent[] ents = asArray();
         Sort.sort(ents, reverseCompareFunc);
         state = STABLE;
@@ -280,10 +280,10 @@ class ConstantPool {
     }
     
     public void unsafeReopen() {
-        if(state == OPEN) return;
+        if (state == OPEN) return;
         for(int i=1;i<entriesByIndex.length;i++) {
             Ent e = entriesByIndex[i];
-            if(e == null) continue;
+            if (e == null) continue;
             e.n = 0;
         }
         entriesByIndex = null;
@@ -302,7 +302,7 @@ class ConstantPool {
     
     ConstantPool(DataInput in) throws ClassFile.ClassReadExn, IOException {
         usedSlots = in.readUnsignedShort();
-        if(usedSlots==0) throw new ClassFile.ClassReadExn("invalid used slots");
+        if (usedSlots==0) throw new ClassFile.ClassReadExn("invalid used slots");
         
         // these are to remember the CPRefEnt e1 and e2s we have to fix up
         int[] e1s = new int[usedSlots];
@@ -323,7 +323,7 @@ class ConstantPool {
                 {
                     e = new CPRefEnt(tag);
                     e1s[index] = in.readUnsignedShort();
-                    if(tag != 7 && tag != 8) e2s[index] = in.readUnsignedShort();
+                    if (tag != 7 && tag != 8) e2s[index] = in.readUnsignedShort();
                     break;
                 }
                 case 3: // Integer
@@ -370,30 +370,30 @@ class ConstantPool {
             }
             if (!(e instanceof CPRefEnt)) continue;
             CPRefEnt ce = (CPRefEnt) e;
-            if(e1s[i] == 0 || e1s[i] >= usedSlots) throw new ClassFile.ClassReadExn("invalid cp index");
+            if (e1s[i] == 0 || e1s[i] >= usedSlots) throw new ClassFile.ClassReadExn("invalid cp index");
             ce.e1 = entriesByIndex[e1s[i]];
-            if(ce.e1 == null)  throw new ClassFile.ClassReadExn("invalid cp index");
-            if(ce.tag != 7 && ce.tag != 8) {
-                if(e2s[i] == 0 || e2s[i] >= usedSlots) throw new ClassFile.ClassReadExn("invalid cp index");
+            if (ce.e1 == null)  throw new ClassFile.ClassReadExn("invalid cp index");
+            if (ce.tag != 7 && ce.tag != 8) {
+                if (e2s[i] == 0 || e2s[i] >= usedSlots) throw new ClassFile.ClassReadExn("invalid cp index");
                 ce.e2 = entriesByIndex[e2s[i]];
-                if(ce.e2 == null)  throw new ClassFile.ClassReadExn("invalid cp index");
+                if (ce.e2 == null)  throw new ClassFile.ClassReadExn("invalid cp index");
             }
             switch(ce.tag) {
                 case 7:
                 case 8:
-                    if(!(ce.e1 instanceof Utf8Ent)) throw new ClassFile.ClassReadExn("expected a utf8 ent");
+                    if (!(ce.e1 instanceof Utf8Ent)) throw new ClassFile.ClassReadExn("expected a utf8 ent");
                     break;
                 case 9:
                 case 10:
                 case 11:
-                    if(!(ce.e1 instanceof CPRefEnt) || ((CPRefEnt)ce.e1).tag != 7)
+                    if (!(ce.e1 instanceof CPRefEnt) || ((CPRefEnt)ce.e1).tag != 7)
                         throw new ClassFile.ClassReadExn("expected a type ent");
-                    if(!(ce.e2 instanceof CPRefEnt) || ((CPRefEnt)ce.e2).tag != 12)
+                    if (!(ce.e2 instanceof CPRefEnt) || ((CPRefEnt)ce.e2).tag != 12)
                         throw new ClassFile.ClassReadExn("expected a name and type ent");
                     break;
                 case 12:
-                    if(!(ce.e1 instanceof Utf8Ent)) throw new ClassFile.ClassReadExn("expected a utf8 ent");
-                    if(!(ce.e2 instanceof Utf8Ent)) throw new ClassFile.ClassReadExn("expected a utf8 ent");
+                    if (!(ce.e1 instanceof Utf8Ent)) throw new ClassFile.ClassReadExn("expected a utf8 ent");
+                    if (!(ce.e2 instanceof Utf8Ent)) throw new ClassFile.ClassReadExn("expected a utf8 ent");
                     break;
             }
         }
