@@ -235,15 +235,15 @@ public interface CGConst {
 
 /*
 #!/usr/bin/perl -w
-@ARGV || push @ARGV,$0;
+@ARGV || push @ARGV, $0;
 my @a = ();
 while(<>) {
         chomp;
         next unless(m|byte ([A-Z0-9_]+) = .*?([0-9xA-F]+);\s+//\s*(.*)$|i);
-        my ($name,$num) = ($1,hex($2));
+        my ($name, $num) = ($1, hex($2));
         $_ = $3;
         my $n = 1<<5;
-        $n |= s/^(\d+)// ? $1 : (s/^V//||die,7);
+        $n |= s/^(\d+)// ? $1 : (s/^V//||die, 7);
         $n |= (1<<4) if(s/^C//);
         $n |= (1<<3) if(s/^B//);
         die if(/./);
@@ -251,7 +251,7 @@ while(<>) {
 }
 print "private static final byte[] OP_DATA = {\n\t";
 for(my $i=0;$i<256;$i++) {
-        printf "0x%02x%s", $a[$i]||1, $i==255?"\n};\n":($i%16)==15?",\n\t":", ";
+        printf "0x%02x%s", $a[$i]||1, $i==255?"\n};\n":($i%16)==15?", \n\t":", ";
 }
 __END__
 */

@@ -36,7 +36,7 @@ class CPGen {
     // INVARIANTS: tag == 3 || tag == 4
     static class IntEnt extends Ent {
         int i;
-        IntEnt(CPGen owner, int tag) { super(owner,tag); }
+        IntEnt(CPGen owner, int tag) { super(owner, tag); }
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeInt(i);  }
         Object key() {
             switch(tag) {
@@ -50,7 +50,7 @@ class CPGen {
     // INVARIANTS: tag == 5 || tag == 6
     static class LongEnt extends Ent {
         long l;
-        LongEnt(CPGen owner, int tag) { super(owner,tag); }
+        LongEnt(CPGen owner, int tag) { super(owner, tag); }
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeLong(l); }
         Object key() {
             switch(tag) {
@@ -75,7 +75,7 @@ class CPGen {
     static class CPRefEnt extends Ent {
         Ent e1;
         Ent e2;
-        CPRefEnt(CPGen owner, int tag) { super(owner,tag); }
+        CPRefEnt(CPGen owner, int tag) { super(owner, tag); }
         
         String debugToString() { return "[" + e1.n + ":" + e1.debugToString() + (e2 == null ? "" : " + " + e2.n + ":" + e2.debugToString()) + "]"; }
         
@@ -107,7 +107,7 @@ class CPGen {
         
     static class Utf8Ent extends Ent {
         String s;
-        Utf8Ent(CPGen owner) { super(owner,1); }
+        Utf8Ent(CPGen owner) { super(owner, 1); }
         String debugToString() { return s; }
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeUTF(s); }
         Object key() { throw new Error("Brian is lame"); }
@@ -166,7 +166,7 @@ class CPGen {
         return e;
     }
     
-    public final Ent addNameAndType(String name, String descriptor) { return add(new NameAndTypeKey(name,descriptor)); }
+    public final Ent addNameAndType(String name, String descriptor) { return add(new NameAndTypeKey(name, descriptor)); }
     public final Ent addUtf8(String s) { return add(new Utf8Key(s)); }
     
     public final Ent add(Object o) {
@@ -179,27 +179,27 @@ class CPGen {
         }
         
         if(o instanceof Type.Object) {
-            CPRefEnt ce = new CPRefEnt(this,7);
+            CPRefEnt ce = new CPRefEnt(this, 7);
             ce.e1 = addUtf8(((Type.Object)o).internalForm());
             ent = ce;
         } else if(o instanceof String) {
-            CPRefEnt ce = new CPRefEnt(this,8);
+            CPRefEnt ce = new CPRefEnt(this, 8);
             ce.e1 = addUtf8((String)o);
             ent = ce;
         } else if(o instanceof Integer) {
-            IntEnt ue = new IntEnt(this,3);
+            IntEnt ue = new IntEnt(this, 3);
             ue.i = ((Integer)o).intValue();
             ent = ue;
         } else if(o instanceof Float) {
-            IntEnt ue = new IntEnt(this,4);
+            IntEnt ue = new IntEnt(this, 4);
             ue.i = Float.floatToIntBits(((Float)o).floatValue());
             ent = ue;
         } else if(o instanceof Long) {
-            LongEnt le = new LongEnt(this,5);
+            LongEnt le = new LongEnt(this, 5);
             le.l = ((Long)o).longValue();
             ent = le;
         } else if(o instanceof Double) {
-            LongEnt le = new LongEnt(this,6);
+            LongEnt le = new LongEnt(this, 6);
             le.l = Double.doubleToLongBits(((Double)o).doubleValue());
             ent = le;
         } else if(o instanceof Utf8Key) {
@@ -207,7 +207,7 @@ class CPGen {
             ue.s = ((Utf8Key)o).s;
             ent = ue;
         } else if(o instanceof NameAndTypeKey) {
-            CPRefEnt ce = new CPRefEnt(this,12);
+            CPRefEnt ce = new CPRefEnt(this, 12);
             NameAndTypeKey key = (NameAndTypeKey) o;
             ce.e1 = addUtf8(key.name);
             ce.e2 = addUtf8(key.type);
@@ -216,9 +216,9 @@ class CPGen {
             ClassGen.FieldOrMethodRef key = (ClassGen.FieldOrMethodRef) o;
             int tag = o instanceof FieldRef ? 9 : o instanceof MethodRef ? 10 : o instanceof MethodRef.I ? 11 : 0;
             if(tag == 0) throw new Error("should never happen");
-            CPRefEnt ce = new CPRefEnt(this,tag);
+            CPRefEnt ce = new CPRefEnt(this, tag);
             ce.e1 = add(key.klass);
-            ce.e2 = addNameAndType(key.name,key.descriptor);
+            ce.e2 = addNameAndType(key.name, key.descriptor);
             ent = ce;
         } else {
             throw new IllegalArgumentException("Unknown type passed to add");
@@ -231,7 +231,7 @@ class CPGen {
 
         usedSlots += spaces;        
 
-        entries.put(o,ent);
+        entries.put(o, ent);
         return ent;
     }
     
@@ -281,9 +281,7 @@ class CPGen {
     public void optimize() {
         if(state != OPEN) throw new IllegalStateException("can't optimize a stable constant pool");
         Ent[] ents = asArray();
-        Sort.sort(ents,reverseCompareFunc);
-        for(int i=0;i<ents.length;i++)
-            System.err.println("" + i + " -> " + ents[i].debugToString() + " (" + ents[i].n + ")");
+        Sort.sort(ents, reverseCompareFunc);
         state = STABLE;
         assignIndex(ents);
     }
@@ -301,10 +299,10 @@ class CPGen {
     
     public void dump(DataOutput o) throws IOException {
         Ent[] ents = asArray();
-        Sort.sort(ents,compareFunc);
+        Sort.sort(ents, compareFunc);
         o.writeShort(usedSlots);
         for(int i=0;i<ents.length;i++) {
-            System.err.println("" + ents[i].n + ": " + ents[i].debugToString());
+            //System.err.println("" + ents[i].n + ": " + ents[i].debugToString());
             ents[i].dump(o);
         }
     }
@@ -331,7 +329,7 @@ class CPGen {
                 case 11: // Instance Method Ref
                 case 12: // NameAndType
                 {
-                    e = new CPRefEnt(this,tag);
+                    e = new CPRefEnt(this, tag);
                     e1s[index] = in.readUnsignedShort();;
                     if(tag != 7 && tag != 8) e2s[index] = in.readUnsignedShort();
                     break;
@@ -340,7 +338,7 @@ class CPGen {
                 case 4: // Float
                 {
                     IntEnt ie;
-                    e = ie = new IntEnt(this,tag);
+                    e = ie = new IntEnt(this, tag);
                     ie.i = in.readInt();
                     break;
                 }
@@ -348,7 +346,7 @@ class CPGen {
                 case 6: // Double
                 {
                     LongEnt le;
-                    e = le = new LongEnt(this,tag);
+                    e = le = new LongEnt(this, tag);
                     le.l = in.readLong();
                     index++;
                     break;
@@ -400,7 +398,7 @@ class CPGen {
             } else if(e instanceof LongEnt) {
                 index++;
             }
-            entries.put(e.key(),e);
+            entries.put(e.key(), e);
         }
         state = STABLE;
     }

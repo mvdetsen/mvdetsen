@@ -11,10 +11,10 @@ public class MethodRef extends ClassGen.FieldOrMethodRef {
     /** Create a reference to method <i>name</i> of class <i>c</i> with the return type <i>ret</i> and the
         arguments <i>args</i> */
     public MethodRef(Type.Object c, String name, Type ret, Type[] args) {
-        super(c,name,getDescriptor(ret,args));
+        super(c, name, getDescriptor(ret, args));
     }
-    /** Equivalent to MethodRef(new Type.Object(s),...)
-        @see #MethodRef(Type.Object,String,Type,Type[])
+    /** Equivalent to MethodRef(new Type.Object(s), ...)
+        @see #MethodRef(Type.Object, String, Type, Type[])
     */
     public MethodRef(String s, String name, Type ret, Type[] args) {
         this(Type.fromDescriptor(s).asObject(), name, ret, args);
@@ -35,8 +35,8 @@ public class MethodRef extends ClassGen.FieldOrMethodRef {
         users don't need to be concerned with this though because MethodRef's are automatically converted
         to MethodRef.I's when they are applied to an INVOKEINTERFACE bytecode */
     public static class I extends MethodRef {
-        public I(Type.Object c, String name, Type ret, Type[] args) { super(c,name,ret,args); }
-        public I(String s, String name, Type ret, Type[] args) { super(s,name,ret,args); }
+        public I(Type.Object c, String name, Type ret, Type[] args) { super(c, name, ret, args); }
+        public I(String s, String name, Type ret, Type[] args) { super(s, name, ret, args); }
         I(MethodRef m) { super(m); }
     }
 }

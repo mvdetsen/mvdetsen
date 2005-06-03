@@ -52,7 +52,7 @@ public class Type {
         @param base The base type
         @return A one dimensional array of the base type
     */
-    public static Type arrayType(Type base) { return arrayType(base,1); }
+    public static Type arrayType(Type base) { return arrayType(base, 1); }
     /** Returns a <i>dim</i> dimensional array type for the base type <i>base</i>
         @param base The base type
         @param dim Number if dimensions
@@ -75,19 +75,19 @@ public class Type {
         public boolean isObject() { return true; }
 
         private static String _initHelper(String s) {
-            if(!s.startsWith("L") || !s.endsWith(";")) s = "L" + s.replace('.','/') + ";";
+            if(!s.startsWith("L") || !s.endsWith(";")) s = "L" + s.replace('.', '/') + ";";
             if(!validDescriptorString(s)) throw new IllegalArgumentException("invalid descriptor string");
             return s;
         }
 
         String[] components() {
-            StringTokenizer st = new StringTokenizer(descriptor.substring(1,descriptor.length()-1),"/");
+            StringTokenizer st = new StringTokenizer(descriptor.substring(1, descriptor.length()-1), "/");
             String[] a = new String[st.countTokens()];
             for(int i=0;st.hasMoreTokens();i++) a[i] = st.nextToken();
             return a;
         }
         
-        String internalForm() { return descriptor.substring(1,descriptor.length()-1); }
+        String internalForm() { return descriptor.substring(1, descriptor.length()-1); }
         
         static boolean validDescriptorString(String s) {
             return s.startsWith("L") && s.endsWith(";");
@@ -95,7 +95,7 @@ public class Type {
     }    
 
     public static class Array extends Object {
-        protected Array(Type t, int dim) {  super(arrayify(t,dim)); }
+        protected Array(Type t, int dim) {  super(arrayify(t, dim)); }
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
         private static String arrayify(Type t, int dim) {
