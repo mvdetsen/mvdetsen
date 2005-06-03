@@ -69,6 +69,13 @@ public class Type {
         public    boolean  isRef() { return true; }
     }
 
+    public static class Array extends Type.Ref {
+        protected Array(Type t) { super("[" + t.getDescriptor(), t.toString() + "[]"); }
+        public Type.Array asArray() { return this; }
+        public boolean isArray() { return true; }
+        public int dimension() { return getDescriptor().lastIndexOf('['); }
+    }
+
     public static class Class extends Type.Ref {
         protected Class(String s) { super(_initHelper(s), _initHelper2(s)); }
         public Type.Class asClass() { return this; }
@@ -109,7 +116,6 @@ public class Type {
         }
     
         public class Field extends Member {
-            /** Create a reference to field <i>name</i> of class <i>c</i> with the type <i>t</i>  */    
             public final Type type;
             private Field(String name, Type t) { super(name); this.type = t; }
             public String getDescriptor() { return name; }
@@ -134,12 +140,4 @@ public class Type {
         }
 
     }    
-
-    public static class Array extends Type.Ref {
-        protected Array(Type t) { super("[" + t.getDescriptor(), t.toString() + "[]"); }
-        public Type.Array asArray() { return this; }
-        public boolean isArray() { return true; }
-        public int dimension() { return getDescriptor().lastIndexOf('['); }
-    }
-
 }

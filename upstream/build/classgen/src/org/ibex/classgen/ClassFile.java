@@ -12,7 +12,6 @@ public class ClassFile implements CGConst {
     private short major;
     final int flags;
     
-    private String sourceFile; 
     private final Vector fields = new Vector();
     private final Vector methods = new Vector();
     
@@ -46,6 +45,7 @@ public class ClassFile implements CGConst {
         for(int i=0; i<interfaces.length; i++) sb.append((i==0?" ":", ")+interfaces[i]);
         sb.append(" {");
         sb.append(" // [jcf v"+major+"."+minor+"]");
+        String sourceFile = (String)attributes.get("SourceFile");
         if (sourceFile != null) sb.append(" from " + sourceFile);
         sb.append("\n");
         for(int i=0; i<fields.size(); i++) {
@@ -126,7 +126,7 @@ public class ClassFile implements CGConst {
     /** Sets the source value of the SourceFile attribute of this class 
         @param sourceFile The string to be uses as the SourceFile of this class
     */
-    public void setSourceFile(String sourceFile) { this.sourceFile = sourceFile; }
+    public void setSourceFile(String sourceFile) { attributes.add("SourceFile", sourceFile); }
     
     /** Writes the classfile data to the file specifed
         @see ClassFile#dump(OutputStream)
@@ -171,7 +171,6 @@ public class ClassFile implements CGConst {
         cp.add(thisType);
         cp.add(superType);
         if(interfaces != null) for(int i=0;i<interfaces.length;i++) cp.add(interfaces[i]);
-        if(sourceFile != null && !attributes.contains("SourceFile")) attributes.add("SourceFile", cp.addUtf8(sourceFile));
                 
         for(int i=0;i<methods.size();i++) ((MethodGen)methods.elementAt(i)).finish();
         for(int i=0;i<fields.size();i++) ((FieldGen)fields.elementAt(i)).finish();
@@ -230,7 +229,6 @@ public class ClassFile implements CGConst {
         int numMethods = i.readShort();
         for(int j=0; j<numMethods; j++) methods.add(new MethodGen(cp, i, this));
         attributes = new AttrGen(cp, i);
-        sourceFile = (String)attributes.get("SourceFile");
     }
     
     /** Thrown when class generation fails for a reason not under the control of the user
@@ -294,7 +292,7 @@ public class ClassFile implements CGConst {
                     byte[] buf = (byte[]) val;
                     o.writeInt(buf.length);
                     o.write(buf);
-                } else if(val instanceof CPGen.Ent) {
+                } else if (val instanceof CPGen.Ent) {
                     o.writeInt(2);
                     o.writeShort(cp.getIndex((CPGen.Ent)val));
                 } else {
