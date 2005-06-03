@@ -1,6 +1,5 @@
 package org.ibex.classgen.util;
 
-// FIXME: Share this with nestedvm somehow
 public final class Sort {
     private Sort() { }
     

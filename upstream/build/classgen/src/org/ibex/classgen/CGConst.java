@@ -1,6 +1,7 @@
 package org.ibex.classgen;
 
 public interface CGConst {
+
     // Class only
     public static final int ACC_INTERFACE = (byte) 0x0200;
     public static final int ACC_SUPER     = (byte) 0x0020;

@@ -8,6 +8,8 @@ public class ClassGen implements CGConst {
     private final Type.Object thisType;
     private final Type.Object superType;
     private final Type.Object[] interfaces;
+    private short minor;
+    private short major;
     final int flags;
     
     private String sourceFile; 
@@ -16,7 +18,48 @@ public class ClassGen implements CGConst {
     
     final CPGen cp;
     private final AttrGen attributes;
-    
+
+    public static String flagsToString(int flags) {
+        String ret = "";
+        if ((flags & ACC_PUBLIC) != 0)       ret += "public ";
+        if ((flags & ACC_PRIVATE) != 0)      ret += "private ";
+        if ((flags & ACC_PROTECTED) != 0)    ret += "protected ";
+        if ((flags & ACC_STATIC) != 0)       ret += "static ";
+        if ((flags & ACC_FINAL) != 0)        ret += "final ";
+        if ((flags & ACC_ABSTRACT) != 0)     ret += "abstract ";
+        if ((flags & ACC_SYNCHRONIZED) != 0) ret += "synchronized ";
+        if ((flags & ACC_NATIVE) != 0)       ret += "native ";
+        if ((flags & ACC_STRICT) != 0)       ret += "strictfp ";
+        if ((flags & ACC_VOLATILE) != 0)     ret += "volatile ";
+        if ((flags & ACC_TRANSIENT) != 0)    ret += "transient ";
+        return ret;
+    }
+  
+    public String toString() { StringBuffer sb = new StringBuffer(); toString(sb); return sb.toString(); }
+    public void   toString(StringBuffer sb) {
+        sb.append(flagsToString(flags));
+        sb.append((flags & ACC_INTERFACE) != 0 ? "interface " : "class ");
+        sb.append(thisType.humanReadable());
+        if (superType != null) sb.append(" extends " + superType.humanReadable());
+        if (interfaces != null && interfaces.length > 0) sb.append(" implements");
+        for(int i=0; i<interfaces.length; i++) sb.append((i==0?" ":", ")+interfaces[i].humanReadable());
+        sb.append(" {");
+        sb.append(" // [jcf v"+major+"."+minor+"]");
+        if (sourceFile != null) sb.append(" from " + sourceFile);
+        sb.append("\n");
+        for(int i=0; i<fields.size(); i++) {
+            sb.append("  ");
+            ((FieldGen)fields.elementAt(i)).toString(sb);
+            sb.append("\n");
+        }
+        for(int i=0; i<methods.size(); i++) {
+            sb.append("  ");
+            ((MethodGen)methods.elementAt(i)).toString(sb, thisType.getShortName());
+            sb.append("\n");
+        }
+        sb.append("}");
+    }
+
     /** @see #ClassGen(Type.Object, Type.Object, int) */
     public ClassGen(String name, String superName, int flags) {
         this(Type.fromDescriptor(name).asObject(), Type.fromDescriptor(superName).asObject(), flags);
@@ -39,6 +82,8 @@ public class ClassGen implements CGConst {
         this.superType = superType;
         this.interfaces = interfaces;
         this.flags = flags;
+        this.minor = 3;
+        this.major = 45;
         
         cp = new CPGen();
         attributes = new AttrGen(cp);
@@ -133,9 +178,8 @@ public class ClassGen implements CGConst {
         cp.seal();
         
         o.writeInt(0xcafebabe); // magic
-        // FIXME: What should this be for JDK 1.1 ?
-        o.writeShort(0); // minor_version
-        o.writeShort(46); // major_version
+        o.writeShort(minor); // minor_version
+        o.writeShort(major); // major_version
         
         cp.dump(o); // constant_pool
         
@@ -168,21 +212,24 @@ public class ClassGen implements CGConst {
     }
 
     ClassGen(DataInput i) throws ClassReadExn, IOException {
-        if(i.readInt() != 0xcadebabe) throw new ClassReadExn("invalid magic");
-        short minor = (short)i.readInt();
-        if(minor != 3) throw new ClassReadExn("invalid minor version: " + minor);
-        if(i.readInt() != 45) throw new ClassReadExn("invalid major version");
+        int magic = i.readInt();
+        if (magic != 0xcafebabe) throw new ClassReadExn("invalid magic: " + Long.toString(0xffffffffL & magic, 16));
+        minor = i.readShort();
+        //if (minor != 3) throw new ClassReadExn("invalid minor version: " + minor);
+        major = i.readShort();
+        //if (major != 45 && major != 46) throw new ClassReadExn("invalid major version");
         cp = new CPGen(i);
-        flags = (short)i.readShort();
-        thisType = cp.getType(i.readShort());
-        superType = cp.getType(i.readShort());
+        flags = i.readShort();
+        thisType = (Type.Object)cp.getType(i.readShort());
+        superType = (Type.Object)cp.getType(i.readShort());
         interfaces = new Type.Object[i.readShort()];
-        for(int j=0; j<interfaces.length; j++) interfaces[j] = cp.getType(i.readShort());
+        for(int j=0; j<interfaces.length; j++) interfaces[j] = (Type.Object)cp.getType(i.readShort());
         int numFields = i.readShort();
-        for(int j=0; j<numFields; j++) fields.add(new FieldGen(i));
+        for(int j=0; j<numFields; j++) fields.add(new FieldGen(cp, i));
         int numMethods = i.readShort();
-        for(int j=0; j<numMethods; j++) methods.add(new MethodGen(i));
+        for(int j=0; j<numMethods; j++) methods.add(new MethodGen(cp, i));
         attributes = new AttrGen(cp, i);
+        sourceFile = (String)attributes.get("SourceFile");
     }
     
     /** Thrown when class generation fails for a reason not under the control of the user
@@ -223,13 +270,15 @@ public class ClassGen implements CGConst {
         public AttrGen(CPGen cp) { this.cp = cp; }
         public AttrGen(CPGen cp, DataInput in) throws IOException {
             this(cp);
-            while(true) {
+            int size = in.readShort();
+            for(int i=0; i<size; i++) {
                 String name = null;
-                try {
-                    name = ((CPGen.Utf8Ent)cp.getByIndex(in.readShort())).s;
-                } catch (EOFException _) {
-                    return;
-                }
+                int idx = in.readShort();
+                CPGen.Ent e = cp.getByIndex(idx);
+                Object key = e.key();
+                if (key instanceof String) name = (String)key;
+                else name = ((Type)key).getDescriptor();
+
                 int length = in.readInt();
                 if (length==2) {   // FIXME might be wrong assumption
                     ht.put(name, cp.getByIndex(in.readShort()));
@@ -239,6 +288,12 @@ public class ClassGen implements CGConst {
                     ht.put(name, buf);
                 }
             }
+        }
+
+        public Object get(String s) {
+            Object ret = ht.get(s);
+            if (ret instanceof CPGen.Utf8Ent) return ((CPGen.Utf8Ent)ret).s;
+            return ret;
         }
         
         public void add(String s, Object data) {
@@ -269,31 +324,43 @@ public class ClassGen implements CGConst {
         }
     }
     
-    /*public static void main(String[] args) throws Exception {
-        Type.Object me = new Type.Object("Test");
-        ClassGen cg = new ClassGen("Test", "java.lang.Object", ACC_PUBLIC|ACC_SUPER|ACC_FINAL);
-        FieldGen fg = cg.addField("foo", Type.INT, ACC_PUBLIC|ACC_STATIC);
+    public static void main(String[] args) throws Exception {
+        if (args.length==1) {
+            if (args[0].endsWith(".class")) {
+                System.out.println(new ClassGen(new DataInputStream(new FileInputStream(args[0]))));
+            } else {
+                InputStream is = Class.forName(args[0]).getClassLoader().getResourceAsStream(args[0].replace('.', '/')+".class");
+                System.out.println(new ClassGen(new DataInputStream(is)));
+            }
+        } else {
+            /*
+            Type.Object me = new Type.Object("Test");
+            ClassGen cg = new ClassGen("Test", "java.lang.Object", ACC_PUBLIC|ACC_SUPER|ACC_FINAL);
+            FieldGen fg = cg.addField("foo", Type.INT, ACC_PUBLIC|ACC_STATIC);
         
-        MethodGen mg = cg.addMethod("main", Type.VOID, new Type[]{Type.arrayType(Type.STRING)}, ACC_STATIC|ACC_PUBLIC);
-        mg.setMaxLocals(1);
-        mg.addPushConst(0);
-        //mg.add(ISTORE_0);
-        mg.add(PUTSTATIC, fieldRef(me, "foo", Type.INT));
-        int top = mg.size();
-        mg.add(GETSTATIC, cg.fieldRef(new Type.Object("java.lang.System"), "out", new Type.Object("java.io.PrintStream")));
-        //mg.add(ILOAD_0);
-        mg.add(GETSTATIC, cg.fieldRef(me, "foo", Type.INT));
-        mg.add(INVOKEVIRTUAL, cg.methodRef(new Type.Object("java.io.PrintStream"), "println", Type.VOID, new Type[]{Type.INT}));
-        //mg.add(IINC, new int[]{0, 1});
-        //mg.add(ILOAD_0);
-        mg.add(GETSTATIC, cg.fieldRef(me, "foo", Type.INT));
-        mg.addPushConst(1);
-        mg.add(IADD);
-        mg.add(DUP);
-        mg.add(PUTSTATIC, cg.fieldRef(me, "foo", Type.INT));       
-        mg.addPushConst(10);
-        mg.add(IF_ICMPLT, top);
-        mg.add(RETURN);
-        cg.dump("Test.class");
-    }*/
+            MethodGen mg = cg.addMethod("main", Type.VOID, new Type[]{Type.arrayType(Type.STRING)}, ACC_STATIC|ACC_PUBLIC);
+            mg.setMaxLocals(1);
+            mg.addPushConst(0);
+            //mg.add(ISTORE_0);
+            mg.add(PUTSTATIC, fieldRef(me, "foo", Type.INT));
+            int top = mg.size();
+            mg.add(GETSTATIC, cg.fieldRef(new Type.Object("java.lang.System"), "out", new Type.Object("java.io.PrintStream")));
+            //mg.add(ILOAD_0);
+            mg.add(GETSTATIC, cg.fieldRef(me, "foo", Type.INT));
+            mg.add(INVOKEVIRTUAL, cg.methodRef(new Type.Object("java.io.PrintStream"), "println",
+                                               Type.VOID, new Type[]{Type.INT}));
+            //mg.add(IINC, new int[]{0, 1});
+            //mg.add(ILOAD_0);
+            mg.add(GETSTATIC, cg.fieldRef(me, "foo", Type.INT));
+            mg.addPushConst(1);
+            mg.add(IADD);
+            mg.add(DUP);
+            mg.add(PUTSTATIC, cg.fieldRef(me, "foo", Type.INT));       
+            mg.addPushConst(10);
+            mg.add(IF_ICMPLT, top);
+            mg.add(RETURN);
+            cg.dump("Test.class");
+            */
+        }
+    }
 }

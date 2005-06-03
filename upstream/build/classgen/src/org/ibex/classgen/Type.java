@@ -24,7 +24,20 @@ public class Type {
     public static final Type[] NO_ARGS = new Type[0];
     
     final String descriptor;
-    
+
+    public String humanReadable() {
+        if(descriptor.equals("V")) return "void";
+        if(descriptor.equals("I")) return "int";
+        if(descriptor.equals("J")) return "long";
+        if(descriptor.equals("Z")) return "boolean";
+        if(descriptor.equals("D")) return "double";
+        if(descriptor.equals("F")) return "float";
+        if(descriptor.equals("B")) return "byte";
+        if(descriptor.equals("C")) return "char";
+        if(descriptor.equals("S")) return "short";
+        throw new Error("confounded by Type("+descriptor+")");
+    }
+
     protected Type(String descriptor) { this.descriptor = descriptor; }
     
     public static Type fromDescriptor(String descriptor) {
@@ -39,8 +52,7 @@ public class Type {
         if(descriptor.equals("S")) return SHORT;
         if(descriptor.endsWith("[")) return new Type.Array(fromDescriptor(descriptor.substring(0, descriptor.indexOf('['))),
                                                            descriptor.length() - descriptor.indexOf('['));
-        if(Type.Object.validDescriptorString(descriptor)) return new Type.Object(descriptor);
-        return null;
+        return new Type.Object(descriptor);
     }
         
     /** Returns the Java descriptor string for this object ("I", or "Ljava/lang/String", "[[J", etc */
@@ -60,6 +72,7 @@ public class Type {
     */
     public static Type arrayType(Type base, int dim) { return new Type.Array(base, dim); }
 
+    public String toString() { return getDescriptor(); }
     public Type.Object asObject() { throw new RuntimeException("attempted to use "+this+" as a Type.Object, which it is not"); }
     public Type.Array asArray() { throw new RuntimeException("attempted to use "+this+" as a Type.Array, which it is not"); }
     public boolean isObject() { return false; }
@@ -73,6 +86,11 @@ public class Type {
         protected Object(String s) { super(_initHelper(s)); }
         public Type.Object asObject() { return this; }
         public boolean isObject() { return true; }
+        public String humanReadable() { return internalForm().replace('/', '.'); }
+        public String getShortName() {
+            String hr = humanReadable();
+            return hr.substring(hr.lastIndexOf('.')+1);
+        }
 
         private static String _initHelper(String s) {
             if(!s.startsWith("L") || !s.endsWith(";")) s = "L" + s.replace('.', '/') + ";";
@@ -95,9 +113,15 @@ public class Type {
     }    
 
     public static class Array extends Object {
-        protected Array(Type t, int dim) {  super(_initHelper(t, dim)); }
+        private int dim;
+        protected Array(Type t, int dim) { super(_initHelper(t, dim)); this.dim = dim; }
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
+        public String humanReadable() { 
+            String ret = super.internalForm().replace('/', '.');
+            for(int i=0; i<dim; i++) ret += "[]";
+            return ret;
+        }
         String internalForm() { throw new Error("Type.Array does not have an internalForm()"); }
         String[] components() { throw new Error("Type.Array does not have components()"); }
         private static String _initHelper(Type t, int dim) {

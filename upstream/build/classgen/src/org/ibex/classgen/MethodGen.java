@@ -26,7 +26,39 @@ public class MethodGen implements CGConst {
     private byte[] op;
     private Object[] arg;
     
-    MethodGen(DataInput in) { throw new Error("Brian is lame"); }
+    public String toString() { StringBuffer sb = new StringBuffer(); toString(sb, "<init>"); return sb.toString(); }
+    public void   toString(StringBuffer sb, String constructorName) {
+        sb.append(ClassGen.flagsToString(flags));
+        sb.append(ret.humanReadable());
+        sb.append(" ");
+
+        if (name.equals("<clinit>")) sb.append("static ");
+        else {
+            if (name.equals("<init>")) sb.append(constructorName);
+            else sb.append(name);
+            sb.append("(");
+            for(int i=0; i<args.length; i++)
+                sb.append((i==0?"":", ")+args[i].humanReadable());
+            sb.append(") ");
+        }
+        sb.append("{");
+        sb.append("}");
+        // FIXME: attrs, body
+    }
+
+    MethodGen(CPGen cp, DataInput in) throws IOException {
+        this.cp = cp;
+        flags = in.readShort();
+        name = cp.getUtf8ByIndex(in.readShort());
+        String descriptor = cp.getUtf8ByIndex(in.readShort());
+        String ret = descriptor.substring(descriptor.indexOf(')')+1);
+        this.ret = Type.fromDescriptor(ret);
+        //String args = descriptor.substring(1, descriptor.indexOf(')'));
+        args = new Type[0]; // FIXME
+        codeAttrs = null;
+        attrs = new ClassGen.AttrGen(cp, in);
+    }
+
     MethodGen(ClassGen owner, String name, Type ret, Type[] args, int flags) {
         if((flags & ~(ACC_PUBLIC|ACC_PRIVATE|ACC_PROTECTED|ACC_STATIC|ACC_FINAL|ACC_SYNCHRONIZED|ACC_NATIVE|ACC_ABSTRACT|ACC_STRICT)) != 0)
             throw new IllegalArgumentException("invalid flags");

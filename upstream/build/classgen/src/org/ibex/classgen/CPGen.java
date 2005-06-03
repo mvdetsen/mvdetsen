@@ -24,7 +24,6 @@ class CPGen {
         CPGen owner; // don't need this yet, but we will to implement ref() and unref()
         int n; // this is the refcount if state == OPEN, index if >= STABLE
         int tag;
-        Ent e0;
         
         Ent(CPGen owner, int tag) { this.owner = owner; this.tag = tag; }
         
@@ -88,7 +87,7 @@ class CPGen {
         private String fixme() { throw new Error("fixme"); }
         Object key() throws ClassGen.ClassReadExn {
             switch(tag) {
-                case 7: return Type.fromDescriptor(((Utf8Ent)e0).s);
+                case 7: return Type.fromDescriptor(((Utf8Ent)e1).s);
                 case 8: return (((Utf8Ent)e1).s);
                 case 9: {
                     NameAndTypeKey nt = (NameAndTypeKey) e2.key();
@@ -96,12 +95,16 @@ class CPGen {
                     if(t == null) throw new ClassGen.ClassReadExn("invalid type descriptor");
                     return new FieldRef((Type.Object)e1.key(), nt.name, t);
                 }
-                case 10: {
+                case 10: case 11: {
                     NameAndTypeKey nt = (NameAndTypeKey) e2.key();
-                    return new MethodRef((Type.Object)e1.key(), fixme(), null, null);
+                    if (e1.key() == null) throw new Error(e1.tag + " => " + e1.key());
+                    return new MethodRef((Type.Object)e1.key(), "methodname", Type.VOID, new Type[0]); // FIXME FIXME
+                }
+                case 12: {
+                    return new NameAndTypeKey(((Utf8Ent)e1).s, ((Utf8Ent)e2).s); 
                 }
             }
-            throw new Error("FIXME");
+            throw new Error("FIXME " + tag);
         }
     }
         
@@ -110,7 +113,9 @@ class CPGen {
         Utf8Ent(CPGen owner) { super(owner, 1); }
         String debugToString() { return s; }
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeUTF(s); }
-        Object key() { throw new Error("Brian is lame"); }
+        Object key() {
+            return s;
+        }
     }
     
     /*
@@ -146,6 +151,9 @@ class CPGen {
         if(e == null) throw new IllegalStateException("entry not found");
         return getIndex(e);
     }
+    public final String getUtf8ByIndex(int i) {
+        return ((Utf8Ent)getByIndex(i)).s;
+    }
     public final int getUtf8Index(String s) {
         Ent e = getUtf8(s);
         if(e == null) throw new IllegalStateException("entry not found");
@@ -156,7 +164,11 @@ class CPGen {
         return ent.n;
     }
 
-    public final Type.Object getType(int index) { return Type.fromDescriptor(((Utf8Ent)getByIndex(index)).s).asObject(); }
+    public final Type getType(int index) throws ClassGen.ClassReadExn {
+        Ent e = getByIndex(index);
+        if (e instanceof Utf8Ent) return Type.fromDescriptor(((Utf8Ent)e).s);
+        else return (Type)e.key();
+    }
 
     public final Ent getByIndex(int index) {
         if(state < STABLE) throw new IllegalStateException("constant pool is not stable");
@@ -311,8 +323,7 @@ class CPGen {
         usedSlots = in.readUnsignedShort();
         if(usedSlots==0) throw new ClassGen.ClassReadExn("invalid used slots");
         
-        // these are to remember the CPRefEnt e0 and e1s we have to fix up
-        int[] e0s = new int[usedSlots];
+        // these are to remember the CPRefEnt e1 and e2s we have to fix up
         int[] e1s = new int[usedSlots];
         int[] e2s = new int[usedSlots];
         
@@ -330,7 +341,7 @@ class CPGen {
                 case 12: // NameAndType
                 {
                     e = new CPRefEnt(this, tag);
-                    e1s[index] = in.readUnsignedShort();;
+                    e1s[index] = in.readUnsignedShort();
                     if(tag != 7 && tag != 8) e2s[index] = in.readUnsignedShort();
                     break;
                 }
@@ -348,7 +359,6 @@ class CPGen {
                     LongEnt le;
                     e = le = new LongEnt(this, tag);
                     le.l = in.readLong();
-                    index++;
                     break;
                 }
                 case 1: // Utf8
@@ -362,43 +372,50 @@ class CPGen {
                     throw new ClassGen.ClassReadExn("invalid cp ent tag");
             }
             entriesByIndex[index] = e;
+            if (e instanceof LongEnt) index++;
         }
         
         for(int index=1;index<usedSlots;index++) {
             int i = index;
             Ent e = entriesByIndex[index];
-            if(e == null) throw new Error("should never happen");
-            if(e instanceof CPRefEnt) {
-                CPRefEnt ce = (CPRefEnt) e;
-                if(e0s[i] == 0 || e0s[i] >= usedSlots) throw new ClassGen.ClassReadExn("invalid cp index");
-                ce.e0 = entriesByIndex[e0s[i]];
-                if(ce.e0 == null)  throw new ClassGen.ClassReadExn("invalid cp index");
-                if(ce.tag != 7 && ce.tag != 8) {
-                    if(e1s[i] == 0 || e1s[i] >= usedSlots) throw new ClassGen.ClassReadExn("invalid cp index");
-                    ce.e1 = entriesByIndex[e1s[i]];
-                    if(ce.e1 == null)  throw new ClassGen.ClassReadExn("invalid cp index");
-                }
-                switch(ce.tag) {
-                    case 7:
-                    case 8:
-                        if(!(ce.e0 instanceof Utf8Ent)) throw new ClassGen.ClassReadExn("expected a utf8 ent");
-                        break;
-                    case 9:
-                    case 10:
-                    case 11:
-                        if(!(ce.e1 instanceof CPRefEnt) || ((CPRefEnt)ce.e1).tag != 7)
-                            throw new ClassGen.ClassReadExn("expected a type ent");
-                        if(!(ce.e2 instanceof CPRefEnt) || ((CPRefEnt)ce.e2).tag != 12)
-                            throw new ClassGen.ClassReadExn("expected a name and type ent");
-                        break;
-                    case 12:
-                        if(!(ce.e1 instanceof Utf8Ent)) throw new ClassGen.ClassReadExn("expected a utf8 ent");
-                        if(!(ce.e2 instanceof Utf8Ent)) throw new ClassGen.ClassReadExn("expected a utf8 ent");
-                }
-            } else if(e instanceof LongEnt) {
+            if (e == null) throw new Error("should never happen: " + i + "/"+usedSlots);
+            if (e instanceof LongEnt) {
                 index++;
+                continue;
             }
+            if (!(e instanceof CPRefEnt)) continue;
+            CPRefEnt ce = (CPRefEnt) e;
+            if(e1s[i] == 0 || e1s[i] >= usedSlots) throw new ClassGen.ClassReadExn("invalid cp index");
+            ce.e1 = entriesByIndex[e1s[i]];
+            if(ce.e1 == null)  throw new ClassGen.ClassReadExn("invalid cp index");
+            if(ce.tag != 7 && ce.tag != 8) {
+                if(e2s[i] == 0 || e2s[i] >= usedSlots) throw new ClassGen.ClassReadExn("invalid cp index");
+                ce.e2 = entriesByIndex[e2s[i]];
+                if(ce.e2 == null)  throw new ClassGen.ClassReadExn("invalid cp index");
+            }
+            switch(ce.tag) {
+                case 7:
+                case 8:
+                    if(!(ce.e1 instanceof Utf8Ent)) throw new ClassGen.ClassReadExn("expected a utf8 ent");
+                    break;
+                case 9:
+                case 10:
+                case 11:
+                    if(!(ce.e1 instanceof CPRefEnt) || ((CPRefEnt)ce.e1).tag != 7)
+                        throw new ClassGen.ClassReadExn("expected a type ent");
+                    if(!(ce.e2 instanceof CPRefEnt) || ((CPRefEnt)ce.e2).tag != 12)
+                        throw new ClassGen.ClassReadExn("expected a name and type ent");
+                    break;
+                case 12:
+                    if(!(ce.e1 instanceof Utf8Ent)) throw new ClassGen.ClassReadExn("expected a utf8 ent");
+                    if(!(ce.e2 instanceof Utf8Ent)) throw new ClassGen.ClassReadExn("expected a utf8 ent");
+                    break;
+            }
+        }
+        for(int i=1; i<usedSlots; i++) {
+            Ent e = entriesByIndex[i];
             entries.put(e.key(), e);
+            if (e instanceof LongEnt) i++;
         }
         state = STABLE;
     }

@@ -12,8 +12,25 @@ public class FieldGen implements CGConst {
     private final ClassGen.AttrGen attrs;
     
     private Object constantValue;
+
+    public String toString() { StringBuffer sb = new StringBuffer(); toString(sb); return sb.toString(); }
+    public void   toString(StringBuffer sb) {
+        sb.append(ClassGen.flagsToString(flags));
+        sb.append(type.humanReadable());
+        sb.append(" ");
+        sb.append(name);
+        sb.append(";");
+        // FIXME: attrs
+    }
     
-    FieldGen(DataInput in) { throw new Error("Brian is lame"); }
+    FieldGen(CPGen cp, DataInput in) throws IOException {
+        this.cp = cp;
+        flags = in.readShort();
+        name = cp.getUtf8ByIndex(in.readShort());
+        type = cp.getType(in.readShort());
+        attrs = new ClassGen.AttrGen(cp, in);
+    }
+
     FieldGen(ClassGen owner, String name, Type type, int flags) {
         if((flags & ~(ACC_PUBLIC|ACC_PRIVATE|ACC_PROTECTED|ACC_VOLATILE|ACC_TRANSIENT|ACC_STATIC|ACC_FINAL)) != 0)
             throw new IllegalArgumentException("invalid flags");
