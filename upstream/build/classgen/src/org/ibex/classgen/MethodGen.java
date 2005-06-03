@@ -12,7 +12,7 @@ public class MethodGen implements CGConst {
     private static final int FINISHED = -2;
 
     private final ClassFile owner;
-    private final CPGen cp;
+    private final ConstantPool cp;
     private final String name;
     private final Type ret;
     private final Type[] args;
@@ -50,7 +50,7 @@ public class MethodGen implements CGConst {
         // FIXME: attrs, body
     }
 
-    MethodGen(CPGen cp, DataInput in, ClassFile owner) throws IOException {
+    MethodGen(ConstantPool cp, DataInput in, ClassFile owner) throws IOException {
         this.cp = cp;
         this.owner = owner;
         flags = in.readShort();
@@ -89,8 +89,8 @@ public class MethodGen implements CGConst {
         public int start;
         public int end;
         public int handler;
-        public CPGen.Ent typeEnt;
-        public ExnTableEnt(int start, int end, int handler, CPGen.Ent typeEnt) {
+        public ConstantPool.Ent typeEnt;
+        public ExnTableEnt(int start, int end, int handler, ConstantPool.Ent typeEnt) {
             this.start = start;
             this.end = end;
             this.handler = handler;
@@ -280,7 +280,7 @@ public class MethodGen implements CGConst {
             }
         }
         int opdata = OP_DATA[op&0xff];
-        if((opdata&OP_CPENT_FLAG) != 0 && !(arg instanceof CPGen.Ent)) {
+        if((opdata&OP_CPENT_FLAG) != 0 && !(arg instanceof ConstantPool.Ent)) {
             if (op==INVOKEINTERFACE) arg = cp.add(arg, true);
             else arg = cp.add(arg);
         }
@@ -461,7 +461,7 @@ public class MethodGen implements CGConst {
                     break;
                 }
                 case LDC:
-                    j = cp.getIndex((CPGen.Ent)arg[i]);
+                    j = cp.getIndex((ConstantPool.Ent)arg[i]);
                     if(j >= 256) this.op[i] = op = LDC_W;
                     break;
                 default:
@@ -573,7 +573,7 @@ public class MethodGen implements CGConst {
                         if(v < -32768 || v > 32767) throw new ClassFile.Exn("overflow of s2 offset");
                         o.writeShort(v);
                     } else if((opdata & OP_CPENT_FLAG) != 0) {
-                        int v = cp.getIndex((CPGen.Ent)arg);
+                        int v = cp.getIndex((ConstantPool.Ent)arg);
                         if(argLength == 1) o.writeByte(v);
                         else if(argLength == 2) o.writeShort(v);
                         else throw new Error("should never happen");
@@ -612,7 +612,7 @@ public class MethodGen implements CGConst {
         baos.reset();
         o.writeShort(thrownExceptions.size());
         for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
-            o.writeShort(cp.getIndex((CPGen.Ent)thrownExceptions.get(e.nextElement())));
+            o.writeShort(cp.getIndex((ConstantPool.Ent)thrownExceptions.get(e.nextElement())));
         attrs.add("Exceptions", baos.toByteArray());
         
         size = capacity = FINISHED;        

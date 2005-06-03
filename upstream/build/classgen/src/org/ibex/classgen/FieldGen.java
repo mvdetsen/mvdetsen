@@ -5,7 +5,7 @@ import java.io.*;
 /** Class representing a field in a generated classfile
     @see ClassFile#addField */
 public class FieldGen implements CGConst {
-    private final CPGen cp;
+    private final ConstantPool cp;
     private final String name;
     private final Type type;
     private final int flags;
@@ -23,7 +23,7 @@ public class FieldGen implements CGConst {
         // FIXME: attrs
     }
     
-    FieldGen(CPGen cp, DataInput in) throws IOException {
+    FieldGen(ConstantPool cp, DataInput in) throws IOException {
         this.cp = cp;
         flags = in.readShort();
         name = cp.getUtf8ByIndex(in.readShort());

@@ -15,7 +15,7 @@ public class ClassFile implements CGConst {
     private final Vector fields = new Vector();
     private final Vector methods = new Vector();
     
-    final CPGen cp;
+    final ConstantPool cp;
     private final AttrGen attributes;
 
     public static String flagsToString(int flags) {
@@ -61,21 +61,7 @@ public class ClassFile implements CGConst {
         sb.append("}");
     }
 
-    /** @see #ClassFile(Type.Class, Type.Class, int) */
-    public ClassFile(String name, String superName, int flags) {
-        this(Type.instance(name).asClass(), Type.instance(superName).asClass(), flags);
-    }
-
-    /** @see #ClassFile(Type.Class, Type.Class, int, Type.Class[]) */
-    public ClassFile(Type.Class thisType, Type.Class superType, int flags) {
-        this(thisType, superType, flags, null);
-    }
-    
-    /** Creates a new ClassFile object 
-        @param thisType The type of the class to generate
-        @param superType The superclass of the generated class (commonly Type.OBJECT) 
-        @param flags The access flags for this class (ACC_PUBLIC, ACC_FINAL, ACC_SUPER, ACC_INTERFACE, and ACC_ABSTRACT)
-    */
+    public ClassFile(Type.Class thisType, Type.Class superType, int flags) { this(thisType, superType, flags, null); }
     public ClassFile(Type.Class thisType, Type.Class superType, int flags, Type.Class[] interfaces) {
         if((flags & ~(ACC_PUBLIC|ACC_FINAL|ACC_SUPER|ACC_INTERFACE|ACC_ABSTRACT)) != 0)
             throw new IllegalArgumentException("invalid flags");
@@ -86,7 +72,7 @@ public class ClassFile implements CGConst {
         this.minor = 3;
         this.major = 45;
         
-        cp = new CPGen();
+        cp = new ConstantPool();
         attributes = new AttrGen(cp);
     }
     
@@ -218,7 +204,7 @@ public class ClassFile implements CGConst {
         //if (minor != 3) throw new ClassReadExn("invalid minor version: " + minor);
         major = i.readShort();
         //if (major != 45 && major != 46) throw new ClassReadExn("invalid major version");
-        cp = new CPGen(i);
+        cp = new ConstantPool(i);
         flags = i.readShort();
         thisType = (Type.Class)cp.getType(i.readShort());
         superType = (Type.Class)cp.getType(i.readShort());
@@ -242,17 +228,17 @@ public class ClassFile implements CGConst {
     }
     
     static class AttrGen {
-        private final CPGen cp;
+        private final ConstantPool cp;
         private final Hashtable ht = new Hashtable();
         
-        public AttrGen(CPGen cp) { this.cp = cp; }
-        public AttrGen(CPGen cp, DataInput in) throws IOException {
+        public AttrGen(ConstantPool cp) { this.cp = cp; }
+        public AttrGen(ConstantPool cp, DataInput in) throws IOException {
             this(cp);
             int size = in.readShort();
             for(int i=0; i<size; i++) {
                 String name = null;
                 int idx = in.readShort();
-                CPGen.Ent e = cp.getByIndex(idx);
+                ConstantPool.Ent e = cp.getByIndex(idx);
                 Object key = e.key();
                 if (key instanceof String) name = (String)key;
                 else name = ((Type)key).getDescriptor();
@@ -270,7 +256,7 @@ public class ClassFile implements CGConst {
 
         public Object get(String s) {
             Object ret = ht.get(s);
-            if (ret instanceof CPGen.Utf8Ent) return ((CPGen.Utf8Ent)ret).s;
+            if (ret instanceof ConstantPool.Utf8Ent) return ((ConstantPool.Utf8Ent)ret).s;
             return ret;
         }
         
@@ -292,9 +278,9 @@ public class ClassFile implements CGConst {
                     byte[] buf = (byte[]) val;
                     o.writeInt(buf.length);
                     o.write(buf);
-                } else if (val instanceof CPGen.Ent) {
+                } else if (val instanceof ConstantPool.Ent) {
                     o.writeInt(2);
-                    o.writeShort(cp.getIndex((CPGen.Ent)val));
+                    o.writeShort(cp.getIndex((ConstantPool.Ent)val));
                 } else {
                     throw new Error("should never happen");
                 }

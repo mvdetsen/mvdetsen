@@ -5,7 +5,7 @@ import java.io.*;
 
 import org.ibex.classgen.util.*;
 
-class CPGen {
+class ConstantPool {
     private final Hashtable entries = new Hashtable();
     private Ent[] entriesByIndex; // only valid when stable
     
@@ -15,7 +15,7 @@ class CPGen {
     private static final int STABLE = 1; // existing entries won't change
     private static final int SEALED = 2; // no new entries
     
-    CPGen() { }
+    ConstantPool() { }
     
     public abstract class Ent {
         int n; // this is the refcount if state == OPEN, index if >= STABLE
@@ -310,7 +310,7 @@ class CPGen {
         }
     }
     
-    CPGen(DataInput in) throws ClassFile.ClassReadExn, IOException {
+    ConstantPool(DataInput in) throws ClassFile.ClassReadExn, IOException {
         usedSlots = in.readUnsignedShort();
         if(usedSlots==0) throw new ClassFile.ClassReadExn("invalid used slots");
         
