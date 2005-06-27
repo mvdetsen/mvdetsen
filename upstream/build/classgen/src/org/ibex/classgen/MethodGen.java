@@ -104,7 +104,7 @@ public class MethodGen implements CGConst {
         }
     }
 
-    MethodGen(Type.Class c, DataInput in, ConstantPool cp, boolean ownerInterface) throws IOException {
+    MethodGen(Type.Class c, DataInput in, ConstantPool cp) throws IOException {
         this.flags = in.readShort();
         if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new ClassFile.ClassReadExn("invalid flags");
         String name = cp.getUtf8KeyByIndex(in.readShort());
@@ -294,15 +294,15 @@ public class MethodGen implements CGConst {
         return map;
     }
 
-    MethodGen(Type.Class c, String name, Type ret, Type[] args, int flags, boolean ownerInterface) {
+    MethodGen(Type.Class.Method method, int flags) {
         if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
-        this.method = c.method(name, ret, args);
+        this.method = method;
         this.flags = flags;
         
         attrs = new ClassFile.AttrGen();
         codeAttrs = new ClassFile.AttrGen();
         
-        if(ownerInterface || (flags & (ABSTRACT|NATIVE)) != 0) size = capacity = -1;
+        if (((flags & INTERFACE) != 0) || (flags & (ABSTRACT|NATIVE)) != 0) size = capacity = -1;
         
         maxLocals = Math.max(args.length + (flags&STATIC)==0 ? 1 : 0, 4);
     }
