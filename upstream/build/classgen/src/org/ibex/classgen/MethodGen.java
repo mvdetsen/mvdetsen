@@ -142,12 +142,14 @@ public class MethodGen implements CGConst {
                     ConstantPool.Ent ent = cp.getByIndex(in.readUnsignedShort());
                     if (ent.tag != CONSTANT_INTERFACEMETHODREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode");
                     arg = ((ConstantPool.InterfaceMethodKey)ent.key()).method;
-                    if (in.readByte() == 0 || in.readByte() != 0) throw new ClassFile.ClassReadExn("illegal count or 0 arg to invokeinterface");
+                    if (in.readByte() == 0 || in.readByte() != 0)
+                        throw new ClassFile.ClassReadExn("illegal count or 0 arg to invokeinterface");
                     break;
                 }
                 default:
                     if ((opdata&OP_CPENT_FLAG)!=0) {
-                        ConstantPool.Ent ent = cp.getByIndex(argLength == 2 ? in.readUnsignedShort() : argLength == 1 ? in.readUnsignedByte() : -1);
+                        ConstantPool.Ent ent =
+                            cp.getByIndex(argLength == 2 ? in.readUnsignedShort() : argLength == 1 ? in.readUnsignedByte() : -1);
                         int tag = ent.tag;
                         Object key = ent.key();
                         switch(op) {
@@ -163,25 +165,32 @@ public class MethodGen implements CGConst {
                                     case CONSTANT_CLASS:
                                         break;
                                     default:
-                                        throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
+                                        throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" +
+                                                                         Integer.toString(op&0xff,16));
                                 }
                                 break;
                             case GETSTATIC:
                             case PUTSTATIC:
                             case GETFIELD:
                             case PUTFIELD:
-                                if (tag != CONSTANT_FIELDREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
+                                if (tag != CONSTANT_FIELDREF)
+                                    throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" +
+                                                                     Integer.toString(op&0xff,16));
                                 break;
                             case INVOKEVIRTUAL:
                             case INVOKESPECIAL:
                             case INVOKESTATIC:
-                                if (tag != CONSTANT_METHODREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
+                                if (tag != CONSTANT_METHODREF)
+                                    throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" +
+                                                                     Integer.toString(op&0xff,16));
                                 break;
                             case NEW:
                             case ANEWARRAY:
                             case CHECKCAST:
                             case INSTANCEOF:
-                                if (tag != CONSTANT_CLASS) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
+                                if (tag != CONSTANT_CLASS)
+                                    throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" +
+                                                                     Integer.toString(op&0xff,16));
                                 break;                        
                             default:
                                 throw new Error("should never happen");
@@ -211,7 +220,8 @@ public class MethodGen implements CGConst {
                     Switch si = (Switch) arg[i];
                     
                     int pos = map[si.getDefaultTarget()];
-                    if (pos < 0)  throw new ClassFile.ClassReadExn("default target points to invalid bytecode: " + si.getDefaultTarget());
+                    if (pos < 0)
+                        throw new ClassFile.ClassReadExn("default target points to invalid bytecode: " + si.getDefaultTarget());
                     si.setDefaultTarget(pos);
                     
                     for(int j=0;j<si.size();j++) {
