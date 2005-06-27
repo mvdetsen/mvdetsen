@@ -3,27 +3,41 @@ package org.ibex.classgen;
 public interface CGConst {
 
     // Class only
-    public static final int ACC_INTERFACE = (byte) 0x0200;
-    public static final int ACC_SUPER     = (byte) 0x0020;
+    public static final int ACC_INTERFACE = 0x0200;
+    public static final int ACC_SUPER     = 0x0020;
 
     // Field/Method only
-    public static final int ACC_PUBLIC    = (byte) 0x0001;
-    public static final int ACC_PRIVATE   = (byte) 0x0002;
-    public static final int ACC_PROTECTED = (byte) 0x0004;
-    public static final int ACC_STATIC    = (byte) 0x0008;
-    public static final int ACC_FINAL     = (byte) 0x0010;
+    public static final int ACC_PUBLIC    = 0x0001;
+    public static final int ACC_PRIVATE   = 0x0002;
+    public static final int ACC_PROTECTED = 0x0004;
+    public static final int ACC_STATIC    = 0x0008;
+    public static final int ACC_FINAL     = 0x0010;
 
     // Class/Method only
-    public static final int ACC_ABSTRACT  = (byte) 0x0400;
+    public static final int ACC_ABSTRACT  = 0x0400;
     
     // Method Only
-    public static final int ACC_SYNCHRONIZED = (byte) 0x0020;
-    public static final int ACC_NATIVE       = (byte) 0x0100;
-    public static final int ACC_STRICT       = (byte) 0x0800;
+    public static final int ACC_SYNCHRONIZED = 0x0020;
+    public static final int ACC_NATIVE       = 0x0100;
+    public static final int ACC_STRICT       = 0x0800;
 
     // Field only
-    public static final int ACC_VOLATILE  = (byte) 0x0040;
-    public static final int ACC_TRANSIENT = (byte) 0x0080;
+    public static final int ACC_VOLATILE  = 0x0040;
+    public static final int ACC_TRANSIENT = 0x0080;
+    
+    
+    // Constant Pool Stuff
+    public static final int CONSTANT_UTF8 = 1;
+    public static final int CONSTANT_INTEGER = 3;
+    public static final int CONSTANT_FLOAT = 4;
+    public static final int CONSTANT_LONG = 5;
+    public static final int CONSTANT_DOUBLE = 6;
+    public static final int CONSTANT_CLASS = 7;
+    public static final int CONSTANT_STRING = 8;
+    public static final int CONSTANT_FIELDREF = 9;
+    public static final int CONSTANT_METHODREF = 10;
+    public static final int CONSTANT_INTERFACEMETHODREF = 11;
+    public static final int CONSTANT_NAMEANDTYPE = 12;
     
     // Instructions
     
@@ -50,11 +64,11 @@ public interface CGConst {
     public static final byte LDC = (byte) 0x12; // 1C
     public static final byte LDC_W = (byte) 0x13; // 2C
     public static final byte LDC2_W = (byte) 0x14; // 2C
-    public static final byte ILOAD = (byte) 0x15; // 1
-    public static final byte LLOAD = (byte) 0x16; // 1
-    public static final byte FLOAD = (byte) 0x17; // 1
-    public static final byte DLOAD = (byte) 0x18; // 1
-    public static final byte ALOAD = (byte) 0x19; // 1
+    public static final byte ILOAD = (byte) 0x15; // 1U
+    public static final byte LLOAD = (byte) 0x16; // 1U
+    public static final byte FLOAD = (byte) 0x17; // 1U
+    public static final byte DLOAD = (byte) 0x18; // 1U
+    public static final byte ALOAD = (byte) 0x19; // 1U
     public static final byte ILOAD_0 = (byte) 0x1A; // 0
     public static final byte ILOAD_1 = (byte) 0x1B; // 0
     public static final byte ILOAD_2 = (byte) 0x1C; // 0
@@ -83,11 +97,11 @@ public interface CGConst {
     public static final byte BALOAD = (byte) 0x33; // 0
     public static final byte CALOAD = (byte) 0x34; // 0
     public static final byte SALOAD = (byte) 0x35; // 0
-    public static final byte ISTORE = (byte) 0x36; // 1
-    public static final byte LSTORE = (byte) 0x37; // 1
-    public static final byte FSTORE = (byte) 0x38; // 1
-    public static final byte DSTORE = (byte) 0x39; // 1
-    public static final byte ASTORE = (byte) 0x3A; // 1
+    public static final byte ISTORE = (byte) 0x36; // 1U
+    public static final byte LSTORE = (byte) 0x37; // 1U
+    public static final byte FSTORE = (byte) 0x38; // 1U
+    public static final byte DSTORE = (byte) 0x39; // 1U
+    public static final byte ASTORE = (byte) 0x3A; // 1U
     public static final byte ISTORE_0 = (byte) 0x3B; // 0
     public static final byte ISTORE_1 = (byte) 0x3C; // 0
     public static final byte ISTORE_2 = (byte) 0x3D; // 0
@@ -214,7 +228,7 @@ public interface CGConst {
     public static final byte INVOKEVIRTUAL = (byte) 0xB6; // 2C
     public static final byte INVOKESPECIAL = (byte) 0xB7; // 2C
     public static final byte INVOKESTATIC = (byte) 0xB8; // 2C
-    public static final byte INVOKEINTERFACE = (byte) 0xB9; // 2C
+    public static final byte INVOKEINTERFACE = (byte) 0xB9; // 4C
     public static final byte NEW = (byte) 0xBB; // 2C
     public static final byte NEWARRAY = (byte) 0xBC; // 1
     public static final byte ANEWARRAY = (byte) 0xBD; // 2C
@@ -225,7 +239,7 @@ public interface CGConst {
     public static final byte MONITORENTER = (byte) 0xC2; // 0
     public static final byte MONITOREXIT = (byte) 0xC3; // 0
     public static final byte WIDE = (byte) 0xC4; // V
-    public static final byte MULTIANEWARRAY = (byte) 0xC5; // 3
+    public static final byte MULTIANEWARRAY = (byte) 0xC5; // 3C
     public static final byte IFNULL = (byte) 0xC6; // 2B
     public static final byte IFNONNULL = (byte) 0xC7; // 2B
     public static final byte GOTO_W = (byte) 0xC8; // 4B
@@ -238,21 +252,28 @@ public interface CGConst {
 #!/usr/bin/perl -w
 @ARGV || push @ARGV, $0;
 my @a = ();
+my @names = ();
 while(<>) {
         chomp;
         next unless(m|byte ([A-Z0-9_]+) = .*?([0-9xA-F]+);\s+//\s*(.*)$|i);
         my ($name, $num) = ($1, hex($2));
         $_ = $3;
-        my $n = 1<<5;
+        my $n = 1<<6;
         $n |= s/^(\d+)// ? $1 : (s/^V//||die, 7);
         $n |= (1<<4) if(s/^C//);
         $n |= (1<<3) if(s/^B//);
+        $n |= (1<<5) if(s/^U//);
         die if(/./);
         $a[$num] = $n;
+        $names[$num] = $name;
 }
 print "private static final byte[] OP_DATA = {\n\t";
 for(my $i=0;$i<256;$i++) {
         printf "0x%02x%s", $a[$i]||1, $i==255?"\n};\n":($i%16)==15?", \n\t":", ";
+}
+print "final String[] OP_NAMES = new String[]{\n\t";
+for(my $i=0;$i<256;$i++) {
+    printf "\"%s\"%s", lc($names[$i]||""), $i==255?"\n};\n":($i%6)==5?", \n\t":", ";
 }
 __END__
 */
