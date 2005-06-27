@@ -86,7 +86,7 @@ public class ClassFile implements CGConst {
         @see CGConst
     */
     public final MethodGen addMethod(String name, Type ret, Type[] args, int flags) {
-        MethodGen mg = new MethodGen(method(name, ret, args), flags);
+        MethodGen mg = new MethodGen(getType().method(name, ret, args), flags);
         methods.addElement(mg);
         return mg;
     }
@@ -215,7 +215,7 @@ public class ClassFile implements CGConst {
         int numFields = i.readShort();
         for(int j=0; j<numFields; j++) fields.addElement(new FieldGen(i, cp));
         int numMethods = i.readShort();
-        for(int j=0; j<numMethods; j++) methods.addElement(new MethodGen(this.getType(), i, cp);
+        for(int j=0; j<numMethods; j++) methods.addElement(new MethodGen(this.getType(), i, cp));
         attributes = new AttrGen(i, cp);
         
         // FEATURE: Support these

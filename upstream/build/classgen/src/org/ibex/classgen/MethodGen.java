@@ -38,7 +38,7 @@ public class MethodGen implements CGConst {
         
         if (((flags & INTERFACE) != 0) || (flags & (ABSTRACT|NATIVE)) != 0) size = capacity = -1;
         
-        maxLocals = Math.max(args.length + (flags&STATIC)==0 ? 1 : 0, 4);
+        maxLocals = Math.max(method.getNumArgs() + (flags&STATIC)==0 ? 1 : 0, 4);
     }
 
     MethodGen(Type.Class c, DataInput in, ConstantPool cp) throws IOException {
@@ -480,7 +480,7 @@ public class MethodGen implements CGConst {
             int length() { return 12 + targets.length * 4; } // 4bytes/target, hi, lo, default
         }
     
-        public static class Lookup extends Table {
+        public static class Lookup extends Switch {
             public final int[] vals;
             public Lookup(int size) {
                 super(size);
