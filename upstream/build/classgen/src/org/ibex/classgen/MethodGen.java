@@ -97,7 +97,7 @@ public class MethodGen implements CGConst {
                 sb.append(" ");
             }
         }
-        if((flags & (ACC_NATIVE|ACC_ABSTRACT))==0) {
+        if((flags & (NATIVE|ABSTRACT))==0) {
             sb.append("{\n");
             for(int i=0;i<size();i++) {
                 sb.append("    ");
@@ -121,7 +121,7 @@ public class MethodGen implements CGConst {
     MethodGen(ClassFile cf, DataInput in, ConstantPool cp, boolean ownerInterface) throws IOException {
         this.cf = cf;
         flags = in.readShort();
-        if((flags & ~(ACC_PUBLIC|ACC_PRIVATE|ACC_PROTECTED|ACC_STATIC|ACC_FINAL|ACC_SYNCHRONIZED|ACC_NATIVE|ACC_ABSTRACT|ACC_STRICT)) != 0)
+        if((flags & ~(PUBLIC|PRIVATE|PROTECTED|STATIC|FINAL|SYNCHRONIZED|NATIVE|ABSTRACT|STRICT)) != 0)
             throw new ClassFile.ClassReadExn("invalid flags");
         this.name = cp.getUtf8KeyByIndex(in.readShort());
         //System.err.println("Processing " + name + "...");
@@ -131,7 +131,7 @@ public class MethodGen implements CGConst {
         for(int i=0; i<args.length; i++) args[i] = m.getArgType(i);
         this.attrs = new ClassFile.AttrGen(in,cp);
         
-        if((flags & (ACC_NATIVE|ACC_ABSTRACT))==0)  {
+        if((flags & (NATIVE|ABSTRACT))==0)  {
             byte[] codeAttr = (byte[]) attrs.get("Code");
             if(codeAttr == null) throw new ClassFile.ClassReadExn("code attr expected");
             DataInputStream ci = new DataInputStream(new ByteArrayInputStream(codeAttr));
@@ -314,7 +314,7 @@ public class MethodGen implements CGConst {
     }
 
     MethodGen(ClassFile cf, String name, Type ret, Type[] args, int flags, boolean ownerInterface) {
-        if((flags & ~(ACC_PUBLIC|ACC_PRIVATE|ACC_PROTECTED|ACC_STATIC|ACC_FINAL|ACC_SYNCHRONIZED|ACC_NATIVE|ACC_ABSTRACT|ACC_STRICT)) != 0)
+        if((flags & ~(PUBLIC|PRIVATE|PROTECTED|STATIC|FINAL|SYNCHRONIZED|NATIVE|ABSTRACT|STRICT)) != 0)
             throw new IllegalArgumentException("invalid flags");
         this.cf = cf;
         this.name = name;
@@ -325,9 +325,9 @@ public class MethodGen implements CGConst {
         attrs = new ClassFile.AttrGen();
         codeAttrs = new ClassFile.AttrGen();
         
-        if(ownerInterface || (flags & (ACC_ABSTRACT|ACC_NATIVE)) != 0) size = capacity = -1;
+        if(ownerInterface || (flags & (ABSTRACT|NATIVE)) != 0) size = capacity = -1;
         
-        maxLocals = Math.max(args.length + (flags&ACC_STATIC)==0 ? 1 : 0, 4);
+        maxLocals = Math.max(args.length + (flags&STATIC)==0 ? 1 : 0, 4);
     }
     
     class ExnTableEnt {
@@ -635,7 +635,7 @@ public class MethodGen implements CGConst {
             ((ExnTableEnt)exnTable.elementAt(i)).finish(cp);
         
         // We'll set these correctly later
-        if((flags & (ACC_NATIVE|ACC_ABSTRACT))==0) attrs.put("Code","");
+        if((flags & (NATIVE|ABSTRACT))==0) attrs.put("Code","");
         if(thrownExceptions.size() > 0) attrs.put("Exceptions","");
         attrs.finish(cp);
         codeAttrs.finish(cp);
@@ -945,7 +945,7 @@ public class MethodGen implements CGConst {
     }
     
     void dump(DataOutput o, ConstantPool cp) throws IOException {
-        if((flags & (ACC_NATIVE|ACC_ABSTRACT))==0) generateCode(cp);
+        if((flags & (NATIVE|ABSTRACT))==0) generateCode(cp);
         generateExceptions(cp);
         
         o.writeShort(flags);

@@ -23,7 +23,7 @@ public class FieldGen implements CGConst {
     
     FieldGen(DataInput in, ConstantPool cp) throws IOException {
         flags = in.readShort();
-        if((flags & ~(ACC_PUBLIC|ACC_PRIVATE|ACC_PROTECTED|ACC_VOLATILE|ACC_TRANSIENT|ACC_STATIC|ACC_FINAL)) != 0)
+        if((flags & ~(PUBLIC|PRIVATE|PROTECTED|VOLATILE|TRANSIENT|STATIC|FINAL)) != 0)
             throw new ClassFile.ClassReadExn("invalid flags");        
         name = cp.getUtf8KeyByIndex(in.readShort());
         type = Type.instance(cp.getUtf8KeyByIndex(in.readShort()));
@@ -31,7 +31,7 @@ public class FieldGen implements CGConst {
     }
 
     FieldGen(ClassFile owner, String name, Type type, int flags) {
-        if((flags & ~(ACC_PUBLIC|ACC_PRIVATE|ACC_PROTECTED|ACC_VOLATILE|ACC_TRANSIENT|ACC_STATIC|ACC_FINAL)) != 0)
+        if((flags & ~(PUBLIC|PRIVATE|PROTECTED|VOLATILE|TRANSIENT|STATIC|FINAL)) != 0)
             throw new IllegalArgumentException("invalid flags");
         this.name = name;
         this.type = type;
@@ -42,7 +42,7 @@ public class FieldGen implements CGConst {
     /** Sets the ContantValue attribute for this field. 
         @param val The value to set this field to. Must be an Integer, Long, Float, Double, or String */
     public void setConstantValue(Object val) {
-        if((flags & ACC_STATIC) == 0) throw new IllegalStateException("field does not have the ACC_STATIC bit set");
+        if((flags & STATIC) == 0) throw new IllegalStateException("field does not have the STATIC bit set");
         attrs.put("ConstantValue",val);
     }
     

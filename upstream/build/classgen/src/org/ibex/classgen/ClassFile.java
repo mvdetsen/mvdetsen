@@ -19,17 +19,17 @@ public class ClassFile implements CGConst {
 
     static String flagsToString(int flags, boolean isClass) {
         StringBuffer sb = new StringBuffer(32);
-        if ((flags & ACC_PUBLIC) != 0)       sb.append("public ");
-        if ((flags & ACC_PRIVATE) != 0)      sb.append("private ");
-        if ((flags & ACC_PROTECTED) != 0)    sb.append("protected ");
-        if ((flags & ACC_STATIC) != 0)       sb.append("static ");
-        if ((flags & ACC_FINAL) != 0)        sb.append("final ");
-        if ((flags & ACC_ABSTRACT) != 0)     sb.append("abstract ");
-        if (!isClass && (flags & ACC_SYNCHRONIZED) != 0) sb.append("synchronized ");
-        if (!isClass && (flags & ACC_NATIVE) != 0)       sb.append("native ");
-        if (!isClass && (flags & ACC_STRICT) != 0)       sb.append("strictfp ");
-        if (!isClass && (flags & ACC_VOLATILE) != 0)     sb.append("volatile ");
-        if (!isClass && (flags & ACC_TRANSIENT) != 0)    sb.append("transient ");
+        if ((flags & PUBLIC) != 0)       sb.append("public ");
+        if ((flags & PRIVATE) != 0)      sb.append("private ");
+        if ((flags & PROTECTED) != 0)    sb.append("protected ");
+        if ((flags & STATIC) != 0)       sb.append("static ");
+        if ((flags & FINAL) != 0)        sb.append("final ");
+        if ((flags & ABSTRACT) != 0)     sb.append("abstract ");
+        if (!isClass && (flags & SYNCHRONIZED) != 0) sb.append("synchronized ");
+        if (!isClass && (flags & NATIVE) != 0)       sb.append("native ");
+        if (!isClass && (flags & STRICT) != 0)       sb.append("strictfp ");
+        if (!isClass && (flags & VOLATILE) != 0)     sb.append("volatile ");
+        if (!isClass && (flags & TRANSIENT) != 0)    sb.append("transient ");
         return sb.toString();
     }
 
@@ -38,7 +38,7 @@ public class ClassFile implements CGConst {
     String debugToString() { return debugToString(new StringBuffer(4096)).toString(); }
     StringBuffer debugToString(StringBuffer sb) {
         sb.append(flagsToString(flags,true));
-        sb.append((flags & ACC_INTERFACE) != 0 ? "interface " : "class ");
+        sb.append((flags & INTERFACE) != 0 ? "interface " : "class ");
         sb.append(thisType.debugToString());
         if (superType != null) sb.append(" extends " + superType.debugToString());
         if (interfaces != null && interfaces.length > 0) sb.append(" implements");
@@ -63,7 +63,7 @@ public class ClassFile implements CGConst {
 
     public ClassFile(Type.Class thisType, Type.Class superType, int flags) { this(thisType, superType, flags, null); }
     public ClassFile(Type.Class thisType, Type.Class superType, int flags, Type.Class[] interfaces) {
-        if((flags & ~(ACC_PUBLIC|ACC_FINAL|ACC_SUPER|ACC_INTERFACE|ACC_ABSTRACT)) != 0)
+        if((flags & ~(PUBLIC|FINAL|SUPER|INTERFACE|ABSTRACT)) != 0)
             throw new IllegalArgumentException("invalid flags");
         this.thisType = thisType;
         this.superType = superType;
@@ -79,14 +79,14 @@ public class ClassFile implements CGConst {
         @param ret The return type of the method
         @param args The arguments to the method
         @param flags The flags for the method
-                     (ACC_PUBLIC, ACC_PRIVATE, ACC_PROTECTED, ACC_STATIC, ACC_SYNCHRONIZED, ACC_NATIVE, ACC_ABSTRACT, ACC_STRICT)
+                     (PUBLIC, PRIVATE, PROTECTED, STATIC, SYNCHRONIZED, NATIVE, ABSTRACT, STRICT)
         @return A new MethodGen object for the method
         @exception IllegalArgumentException if illegal flags are specified
         @see MethodGen
         @see CGConst
     */
     public final MethodGen addMethod(String name, Type ret, Type[] args, int flags) {
-        MethodGen mg = new MethodGen(this, name, ret, args, flags, (this.flags & ACC_INTERFACE) != 0);
+        MethodGen mg = new MethodGen(this, name, ret, args, flags, (this.flags & INTERFACE) != 0);
         methods.addElement(mg);
         return mg;
     }
@@ -95,7 +95,7 @@ public class ClassFile implements CGConst {
         @param name The name of the filed (not the signature, just the name)
         @param type The type of the field
         @param flags The flags for the field
-        (ACC_PUBLIC, ACC_PRIVATE, ACC_PROTECTED, ACC_STATIC, ACC_FINAL, ACC_VOLATILE, ACC_TRANSIENT)
+        (PUBLIC, PRIVATE, PROTECTED, STATIC, FINAL, VOLATILE, TRANSIENT)
         @return A new FieldGen object for the method
         @exception IllegalArgumentException if illegal flags are specified
         @see FieldGen
@@ -206,7 +206,7 @@ public class ClassFile implements CGConst {
         major = i.readShort();
         ConstantPool cp = new ConstantPool(i);
         flags = i.readShort();
-        if((flags & ~(ACC_PUBLIC|ACC_FINAL|ACC_SUPER|ACC_INTERFACE|ACC_ABSTRACT)) != 0)
+        if((flags & ~(PUBLIC|FINAL|SUPER|INTERFACE|ABSTRACT)) != 0)
             throw new ClassReadExn("invalid flags: " + Integer.toString(flags,16));
         thisType = (Type.Class) cp.getKeyByIndex(i.readShort());
         superType = (Type.Class) cp.getKeyByIndex(i.readShort());
@@ -215,7 +215,7 @@ public class ClassFile implements CGConst {
         int numFields = i.readShort();
         for(int j=0; j<numFields; j++) fields.addElement(new FieldGen(i, cp));
         int numMethods = i.readShort();
-        for(int j=0; j<numMethods; j++) methods.addElement(new MethodGen(this, i, cp, (this.flags & ACC_INTERFACE) != 0));
+        for(int j=0; j<numMethods; j++) methods.addElement(new MethodGen(this, i, cp, (this.flags & INTERFACE) != 0));
         attributes = new AttrGen(i, cp);
         
         // FEATURE: Support these
@@ -306,10 +306,10 @@ public class ClassFile implements CGConst {
         } else {
             /*
             Type.Class me = new Type.Class("Test");
-            ClassFile cg = new ClassFile("Test", "java.lang.Object", ACC_PUBLIC|ACC_SUPER|ACC_FINAL);
-            FieldGen fg = cg.addField("foo", Type.INT, ACC_PUBLIC|ACC_STATIC);
+            ClassFile cg = new ClassFile("Test", "java.lang.Object", PUBLIC|SUPER|FINAL);
+            FieldGen fg = cg.addField("foo", Type.INT, PUBLIC|STATIC);
         
-            MethodGen mg = cg.addMethod("main", Type.VOID, new Type[]{Type.arrayType(Type.STRING)}, ACC_STATIC|ACC_PUBLIC);
+            MethodGen mg = cg.addMethod("main", Type.VOID, new Type[]{Type.arrayType(Type.STRING)}, STATIC|PUBLIC);
             mg.setMaxLocals(1);
             mg.addPushConst(0);
             //mg.add(ISTORE_0);
