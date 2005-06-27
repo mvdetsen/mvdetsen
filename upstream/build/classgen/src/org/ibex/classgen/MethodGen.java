@@ -291,7 +291,8 @@ public class MethodGen implements CGConst {
     }
     
     /** Adds a exception type that can be thrown from this method
-        NOTE: This isn't enforced by the JVM. This is for reference only. A method can throw exceptions not declared to be thrown 
+        NOTE: This isn't enforced by the JVM. This is for reference
+        only. A method can throw exceptions not declared to be thrown
         @param type The type of exception that can be thrown 
     */
     public final void addThrow(Type.Class type) { thrownExceptions.put(type, type); }
@@ -547,30 +548,6 @@ public class MethodGen implements CGConst {
 
     // Emitting Bits //////////////////////////////////////////////////////////////////////////////
    
-    /** Negates the IF* instruction, <i>op</i>  (IF_ICMPGT -> IF_ICMPLE, IFNE -> IFEQ,  etc)
-        @exception IllegalArgumentException if <i>op</i> isn't an IF* instruction */
-    public static byte negate(byte op) {
-        switch(op) {
-            case IFEQ: return IFNE;
-            case IFNE: return IFEQ;
-            case IFLT: return IFGE;
-            case IFGE: return IFLT;
-            case IFGT: return IFLE;
-            case IFLE: return IFGT;
-            case IF_ICMPEQ: return IF_ICMPNE;
-            case IF_ICMPNE: return IF_ICMPEQ;
-            case IF_ICMPLT: return IF_ICMPGE;
-            case IF_ICMPGE: return IF_ICMPLT;
-            case IF_ICMPGT: return IF_ICMPLE;
-            case IF_ICMPLE: return IF_ICMPGT;
-            case IF_ACMPEQ: return IF_ACMPNE;
-            case IF_ACMPNE: return IF_ACMPEQ;
-            
-            default:
-                throw new IllegalArgumentException("Can't negate " + Integer.toHexString(op));
-        }
-    }
-
     private Object resolveTarget(Object arg) {
         int target;
         if (arg instanceof PhantomTarget) {
@@ -1043,5 +1020,32 @@ public class MethodGen implements CGConst {
             sb.append(";");
         }
     }
+
+    // Unused //////////////////////////////////////////////////////////////////////////////
+
+    /** Negates the IF* instruction, <i>op</i>  (IF_ICMPGT -> IF_ICMPLE, IFNE -> IFEQ,  etc)
+        @exception IllegalArgumentException if <i>op</i> isn't an IF* instruction */
+    public static byte negate(byte op) {
+        switch(op) {
+            case IFEQ: return IFNE;
+            case IFNE: return IFEQ;
+            case IFLT: return IFGE;
+            case IFGE: return IFLT;
+            case IFGT: return IFLE;
+            case IFLE: return IFGT;
+            case IF_ICMPEQ: return IF_ICMPNE;
+            case IF_ICMPNE: return IF_ICMPEQ;
+            case IF_ICMPLT: return IF_ICMPGE;
+            case IF_ICMPGE: return IF_ICMPLT;
+            case IF_ICMPGT: return IF_ICMPLE;
+            case IF_ICMPLE: return IF_ICMPGT;
+            case IF_ACMPEQ: return IF_ACMPNE;
+            case IF_ACMPNE: return IF_ACMPEQ;
+            
+            default:
+                throw new IllegalArgumentException("Can't negate " + Integer.toHexString(op));
+        }
+    }
+
 
 }
