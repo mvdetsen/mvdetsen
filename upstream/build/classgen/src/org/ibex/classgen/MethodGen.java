@@ -9,17 +9,15 @@ public class MethodGen implements CGConst {
     private final static boolean EMIT_NOPS = false;
     
     private static final int NO_CODE = -1;
-    private static final int FINISHED = -2;
 
-    private final ClassFile owner;
-    private final ConstantPool cp;
+    private final ClassFile cf;
     private final String name;
     private final Type ret;
     private final Type[] args;
     private final int flags;
     private final ClassFile.AttrGen attrs;
     private final ClassFile.AttrGen codeAttrs;
-    private final Hashtable exnTable = new Hashtable();
+    private final Vector exnTable = new Vector();
     private final Hashtable thrownExceptions = new Hashtable();
     
     private int maxStack = 16;
@@ -29,78 +27,341 @@ public class MethodGen implements CGConst {
     private int capacity;
     private byte[] op;
     private Object[] arg;
+    private ConstantPool.Ent[] cparg;
     
-    public String toString() { StringBuffer sb = new StringBuffer(); toString(sb, "<init>"); return sb.toString(); }
-    public void   toString(StringBuffer sb, String constructorName) {
-        sb.append(ClassFile.flagsToString(flags));
-        sb.append(ret);
-        sb.append(" ");
+    public void debugToString(StringBuffer sb, String constructorName) {
+        // This is intentionally a local variable so it can be removed by gcclass
+        final String[] OP_NAMES = new String[]{
+            "nop", "aconst_null", "iconst_m1", "iconst_0", "iconst_1", "iconst_2", 
+            "iconst_3", "iconst_4", "iconst_5", "lconst_0", "lconst_1", "fconst_0", 
+            "fconst_1", "fconst_2", "dconst_0", "dconst_1", "bipush", "sipush", 
+            "ldc", "ldc_w", "ldc2_w", "iload", "lload", "fload", 
+            "dload", "aload", "iload_0", "iload_1", "iload_2", "iload_3", 
+            "lload_0", "lload_1", "lload_2", "lload_3", "fload_0", "fload_1", 
+            "fload_2", "fload_3", "dload_0", "dload_1", "dload_2", "dload_3", 
+            "aload_0", "aload_1", "aload_2", "aload_3", "iaload", "laload", 
+            "faload", "daload", "aaload", "baload", "caload", "saload", 
+            "istore", "lstore", "fstore", "dstore", "astore", "istore_0", 
+            "istore_1", "istore_2", "istore_3", "lstore_0", "lstore_1", "lstore_2", 
+            "lstore_3", "fstore_0", "fstore_1", "fstore_2", "fstore_3", "dstore_0", 
+            "dstore_1", "dstore_2", "dstore_3", "astore_0", "astore_1", "astore_2", 
+            "astore_3", "iastore", "lastore", "fastore", "dastore", "aastore", 
+            "bastore", "castore", "sastore", "pop", "pop2", "dup", 
+            "dup_x1", "dup_x2", "dup2", "dup2_x1", "dup2_x2", "swap", 
+            "iadd", "ladd", "fadd", "dadd", "isub", "lsub", 
+            "fsub", "dsub", "imul", "lmul", "fmul", "dmul", 
+            "idiv", "ldiv", "fdiv", "ddiv", "irem", "lrem", 
+            "frem", "drem", "ineg", "lneg", "fneg", "dneg", 
+            "ishl", "lshl", "ishr", "lshr", "iushr", "lushr", 
+            "iand", "land", "ior", "lor", "ixor", "lxor", 
+            "iinc", "i2l", "i2f", "i2d", "l2i", "l2f", 
+            "l2d", "f2i", "f2l", "f2d", "d2i", "d2l", 
+            "d2f", "i2b", "i2c", "i2s", "lcmp", "fcmpl", 
+            "fcmpg", "dcmpl", "dcmpg", "ifeq", "ifne", "iflt", 
+            "ifge", "ifgt", "ifle", "if_icmpeq", "if_icmpne", "if_icmplt", 
+            "if_icmpge", "if_icmpgt", "if_icmple", "if_acmpeq", "if_acmpne", "goto", 
+            "jsr", "ret", "tableswitch", "lookupswitch", "ireturn", "lreturn", 
+            "freturn", "dreturn", "areturn", "return", "getstatic", "putstatic", 
+            "getfield", "putfield", "invokevirtual", "invokespecial", "invokestatic", "invokeinterface", 
+            "", "new", "newarray", "anewarray", "arraylength", "athrow", 
+            "checkcast", "instanceof", "monitorenter", "monitorexit", "wide", "multianewarray", 
+            "ifnull", "ifnonnull", "goto_w", "jsr_w", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", ""
+        };
+        
+        sb.append("  ").append(ClassFile.flagsToString(flags,false));
 
         if (name.equals("<clinit>")) sb.append("static ");
         else {
-            if (name.equals("<init>")) sb.append(constructorName);
-            else sb.append(name);
+            if (name.equals("<init>"))
+                sb.append(constructorName);
+            else
+                sb.append(ret.debugToString()).append(" ").append(name);
             sb.append("(");
             for(int i=0; i<args.length; i++)
-                sb.append((i==0?"":", ")+args[i]);
+                sb.append((i==0?"":", ")+args[i].debugToString());
             sb.append(") ");
+            if(thrownExceptions.size() > 0) {
+                sb.append("throws");
+                for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
+                    sb.append(" ").append(((Type.Class)e.nextElement()).debugToString()).append(",");
+                sb.setLength(sb.length()-1);
+                sb.append(" ");
+            }
         }
-        sb.append("{");
-        sb.append("}");
-        // FIXME: attrs, body
+        if((flags & (ACC_NATIVE|ACC_ABSTRACT))==0) {
+            sb.append("{\n");
+            for(int i=0;i<size();i++) {
+                sb.append("    ");
+                for(int j=i==0?1:i;j<10000;j*=10) sb.append(" ");
+                sb.append(i).append(": ");
+                sb.append(OP_NAMES[op[i]&0xff]);
+                String s = null;
+                if(arg[i] instanceof Type) s = ((Type)arg[i]).debugToString();
+                else if(arg[i] instanceof Type.Class.Member) s = ((Type.Class.Member)arg[i]).toString();
+                else if(arg[i] instanceof String) s = "\"" + s + "\"";
+                else if(arg[i] != null) s = arg[i].toString();
+                if(s != null) sb.append(" ").append(s);
+                sb.append("\n");
+            }
+            sb.append("  }\n");
+        } else {
+            sb.append(";");
+        }
     }
 
-    MethodGen(ConstantPool cp, DataInput in, ClassFile owner) throws IOException {
-        this.cp = cp;
-        this.owner = owner;
+    MethodGen(ClassFile cf, DataInput in, ConstantPool cp, boolean ownerInterface) throws IOException {
+        this.cf = cf;
         flags = in.readShort();
-        name = cp.getUtf8ByIndex(in.readShort());
-        String descriptor = cp.getUtf8ByIndex(in.readShort());
-        String ret = descriptor.substring(descriptor.indexOf(')')+1);
-        this.ret = Type.instance(ret);
-        //String args = descriptor.substring(1, descriptor.indexOf(')'));
-        args = new Type[0]; // FIXME
-        codeAttrs = null;
-        attrs = new ClassFile.AttrGen(cp, in);
+        if((flags & ~(ACC_PUBLIC|ACC_PRIVATE|ACC_PROTECTED|ACC_STATIC|ACC_FINAL|ACC_SYNCHRONIZED|ACC_NATIVE|ACC_ABSTRACT|ACC_STRICT)) != 0)
+            throw new ClassFile.ClassReadExn("invalid flags");
+        this.name = cp.getUtf8KeyByIndex(in.readShort());
+        //System.err.println("Processing " + name + "...");
+        Type.Class.Method m = cf.getType().method(name+cp.getUtf8KeyByIndex(in.readShort()));
+        this.ret = m.returnType;
+        this.args = new Type[m.getNumArgs()];
+        for(int i=0; i<args.length; i++) args[i] = m.getArgType(i);
+        this.attrs = new ClassFile.AttrGen(in,cp);
+        
+        if((flags & (ACC_NATIVE|ACC_ABSTRACT))==0)  {
+            byte[] codeAttr = (byte[]) attrs.get("Code");
+            if(codeAttr == null) throw new ClassFile.ClassReadExn("code attr expected");
+            DataInputStream ci = new DataInputStream(new ByteArrayInputStream(codeAttr));
+            maxStack = ci.readUnsignedShort();
+            maxLocals = ci.readUnsignedShort();
+            int codeLen = ci.readInt();
+            int[] bytecodeMap = parseCode(ci,codeLen,cp);
+            int numExns = ci.readUnsignedShort();
+            while(numExns-- > 0)
+                exnTable.addElement(new ExnTableEnt(ci,cp,bytecodeMap));
+            codeAttrs = new ClassFile.AttrGen(ci,cp);
+            // FEATURE: Support these
+            // NOTE: Until we can support them properly we HAVE to delete them,
+            //       they'll be incorrect after we rewrite the constant pool, etc
+            codeAttrs.remove("LineNumberTable");
+            codeAttrs.remove("LocalVariableTable");
+            
+        } else {
+            codeAttrs = new ClassFile.AttrGen();
+        }
+
+        if(attrs.contains("Exceptions")) {
+            DataInputStream ei = new DataInputStream(new ByteArrayInputStream((byte[]) attrs.get("Exceptions")));
+            int exnCount = ei.readUnsignedShort();
+            while(exnCount-- > 0) {
+                Type.Class t = (Type.Class) cp.getKeyByIndex(ei.readUnsignedShort());
+                thrownExceptions.put(t,t);
+            }
+        }
+    }
+        
+    final int[] parseCode(DataInputStream in, int codeLen, ConstantPool cp) throws IOException {
+        int[] map = new int[codeLen];
+        int pc;
+        for(pc=0;pc<map.length;pc++) map[pc] = -1;
+        for(pc=0;pc<codeLen;) {
+            byte op = in.readByte();
+            int opdata = OP_DATA[op&0xff];
+            //System.err.println("Processing " + Integer.toString(op&0xff,16) + " at " + pc);
+            if((opdata&OP_VALID_FLAG)==0) throw new ClassFile.ClassReadExn("invalid bytecode " + (op&0xff));
+            int argLength = opdata & OP_ARG_LENGTH_MASK;
+            int mypc = pc;
+            map[mypc] = size();
+            pc += 1 + (argLength == 7 ? 0 : argLength);
+            if(argLength == 0)  { add(op); continue; }
+            Object arg;
+            switch(op) {
+                case IINC:
+                    arg = new Pair(in.readUnsignedByte(),in.readByte());
+                    break;
+                case TABLESWITCH:
+                case LOOKUPSWITCH:
+                    SI si;
+                    for(;(pc&3) != 0;pc++) if(in.readByte() != 0) throw new ClassFile.ClassReadExn("invalid padding");
+                    int def = in.readInt() + mypc;
+                    pc += 4;
+                    if(op == LOOKUPSWITCH) {
+                        LSI lsi = new LSI(in.readInt());
+                        pc += 4;
+                        for(int i=0;i<lsi.size();i++) {
+                            lsi.setVal(i,in.readInt());
+                            lsi.setTarget(i,in.readInt() + mypc);
+                            pc += 8;
+                        }
+                        si = lsi;
+                    } else {
+                        int lo = in.readInt();
+                        int hi = in.readInt();
+                        pc += 8;
+                        TSI tsi = new TSI(lo,hi);
+                        for(int i=0;i<tsi.size();i++) { tsi.setTarget(i,in.readInt() + mypc); pc += 4; }
+                        si = tsi;
+                    }
+                    si.setDefaultTarget(def);
+                    arg = si;
+                    break;
+                case WIDE: {
+                    byte wideop = in.readByte();
+                    arg = wideop == IINC 
+                        ? new Wide(wideop,in.readUnsignedShort(),in.readShort()) 
+                        : new Wide(wideop,in.readUnsignedShort());
+                    pc += wideop == IINC ? 5 : 3;
+                    break;
+                }
+                case MULTIANEWARRAY:
+                    arg = new MultiANewArray((Type.Class)cp.getKeyByIndex(in.readUnsignedShort()),in.readUnsignedByte());
+                    break;
+                case INVOKEINTERFACE: {
+                    ConstantPool.Ent ent = cp.getByIndex(in.readUnsignedShort());
+                    if(ent.tag != CONSTANT_INTERFACEMETHODREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode");
+                    arg = ((ConstantPool.InterfaceMethodKey)ent.key()).method;
+                    if(in.readByte() == 0 || in.readByte() != 0) throw new ClassFile.ClassReadExn("illegal count or 0 arg to invokeinterface");
+                    break;
+                }
+                default:
+                    if((opdata&OP_CPENT_FLAG)!=0) {
+                        ConstantPool.Ent ent = cp.getByIndex(argLength == 2 ? in.readUnsignedShort() : argLength == 1 ? in.readUnsignedByte() : -1);
+                        int tag = ent.tag;
+                        Object key = ent.key();
+                        switch(op) {
+                            case LDC:
+                            case LDC_W:
+                            case LDC2_W:
+                                switch(tag) {
+                                    case CONSTANT_INTEGER:
+                                    case CONSTANT_FLOAT:
+                                    case CONSTANT_LONG:
+                                    case CONSTANT_DOUBLE:
+                                    case CONSTANT_STRING:
+                                    case CONSTANT_CLASS:
+                                        break;
+                                    default:
+                                        throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
+                                }
+                                break;
+                            case GETSTATIC:
+                            case PUTSTATIC:
+                            case GETFIELD:
+                            case PUTFIELD:
+                                if(tag != CONSTANT_FIELDREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
+                                break;
+                            case INVOKEVIRTUAL:
+                            case INVOKESPECIAL:
+                            case INVOKESTATIC:
+                                if(tag != CONSTANT_METHODREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
+                                break;
+                            case NEW:
+                            case ANEWARRAY:
+                            case CHECKCAST:
+                            case INSTANCEOF:
+                                if(tag != CONSTANT_CLASS) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
+                                break;                        
+                            default:
+                                throw new Error("should never happen");
+                        }
+                        arg = key;
+                    } else {
+                        // treat everything else (including branches for now) as plain old ints
+                        int n;
+                        boolean unsigned = (opdata&OP_UNSIGNED_FLAG)!=0;
+                        if(argLength == 1) n = unsigned ? in.readUnsignedByte() : in.readByte();
+                        else if(argLength == 2) n = unsigned ? in.readUnsignedShort() : in.readShort();
+                        else throw new Error("should never happen");
+                        if((opdata&OP_BRANCH_FLAG)!=0) n += mypc;
+                        arg = N(n);
+                    }
+                    break;
+            }
+            add(op,arg);
+        }
+        if(pc != codeLen) throw new ClassFile.ClassReadExn("didn't read enough code (" + pc + "/" + codeLen + " in " + name + ")");
+        for(int i=0;i<size();i++) {
+            switch(op[i]) {
+                case TABLESWITCH:
+                case LOOKUPSWITCH:
+                {
+                    SI si = (SI) arg[i];
+                    
+                    int pos = map[si.getDefaultTarget()];
+                    if(pos < 0)  throw new ClassFile.ClassReadExn("default target points to invalid bytecode: " + si.getDefaultTarget());
+                    si.setDefaultTarget(pos);
+                    
+                    for(int j=0;j<si.size();j++) {
+                        pos = map[si.getTarget(j)];
+                        if(pos < 0)  throw new ClassFile.ClassReadExn("target points to invalid bytecode");
+                        si.setTarget(j,pos);
+                    }
+                    break;
+                }
+                default:
+                    if(OP_BRANCH(op[i])) {
+                        int pos = map[((Integer)arg[i]).intValue()];
+                        if(pos < 0)  throw new ClassFile.ClassReadExn("branch points to invalid bytecode");
+                        arg[i] = N(pos);
+                    }
+                    break;
+            }
+        }
+        return map;
     }
 
-    MethodGen(ClassFile owner, String name, Type ret, Type[] args, int flags) {
+    MethodGen(ClassFile cf, String name, Type ret, Type[] args, int flags, boolean ownerInterface) {
         if((flags & ~(ACC_PUBLIC|ACC_PRIVATE|ACC_PROTECTED|ACC_STATIC|ACC_FINAL|ACC_SYNCHRONIZED|ACC_NATIVE|ACC_ABSTRACT|ACC_STRICT)) != 0)
             throw new IllegalArgumentException("invalid flags");
-        this.cp = owner.cp;
+        this.cf = cf;
         this.name = name;
         this.ret = ret;
         this.args = args;
         this.flags = flags;
-        this.owner = owner;
         
-        attrs = new ClassFile.AttrGen(cp);
-        codeAttrs = new ClassFile.AttrGen(cp);
+        attrs = new ClassFile.AttrGen();
+        codeAttrs = new ClassFile.AttrGen();
         
-        cp.addUtf8(name);
-        cp.addUtf8(owner.getType().method(name, ret, args).getDescriptor());
-        
-        if((owner.flags & ACC_INTERFACE) != 0 || (flags & (ACC_ABSTRACT|ACC_NATIVE)) != 0) size = capacity = -1;
+        if(ownerInterface || (flags & (ACC_ABSTRACT|ACC_NATIVE)) != 0) size = capacity = -1;
         
         maxLocals = Math.max(args.length + (flags&ACC_STATIC)==0 ? 1 : 0, 4);
     }
     
-    private class ExnTableEnt {
-        public int start;
-        public int end;
-        public int handler;
-        public ConstantPool.Ent typeEnt;
-        public ExnTableEnt(int start, int end, int handler, ConstantPool.Ent typeEnt) {
+    class ExnTableEnt {
+        final int start;
+        final int end;
+        final int handler;
+        final Type.Class type; // null type means all exceptions (for finally)
+        
+        ExnTableEnt(DataInput in, ConstantPool cp, int[] bytecodeMap) throws IOException {
+            int startPC = in.readUnsignedShort();
+            int endPC = in.readUnsignedShort();
+            int handlerPC = in.readUnsignedShort();
+            int index = in.readUnsignedShort();
+            this.type = index == 0 ? null : (Type.Class) cp.getKeyByIndex(index);
+            int max = bytecodeMap.length;
+            if(startPC >= max || bytecodeMap[startPC] < 0) throw new ClassFile.ClassReadExn("invalid startPC");
+            if(endPC >= max || bytecodeMap[endPC] < 0) throw new ClassFile.ClassReadExn("invalid startPC");
+            if(handlerPC >= max || bytecodeMap[handlerPC] < 0) throw new ClassFile.ClassReadExn("invalid startPC");
+            this.start = bytecodeMap[startPC];
+            this.end = bytecodeMap[endPC];
+            this.handler = bytecodeMap[handlerPC];
+        }
+        ExnTableEnt(int start, int end, int handler, Type.Class type) {
             this.start = start;
             this.end = end;
             this.handler = handler;
-            this.typeEnt = typeEnt;
+            this.type = type;
         }
-        public void dump(DataOutput o, int[] pc, int endPC) throws IOException {
+        void finish(ConstantPool cp) { if(type != null) cp.add(type); }
+        void dump(DataOutput o, int[] pc, int endPC, ConstantPool cp) throws IOException {
             o.writeShort(pc[start]);
             o.writeShort(end==pc.length ? endPC : pc[end]);
             o.writeShort(pc[handler]);
-            o.writeShort(cp.getIndex(typeEnt));
+            o.writeShort(type == null ? 0 : cp.getIndex(type));
         }
     }
     
@@ -111,21 +372,18 @@ public class MethodGen implements CGConst {
         @param type The type of exception that is to be handled (MUST inherit from Throwable)
     */
     public final void addExceptionHandler(int start, int end, int handler, Type.Class type) {
-        exnTable.put(type, new ExnTableEnt(start, end, handler, cp.add(type)));
+        exnTable.addElement(new ExnTableEnt(start, end, handler, type));
     }
     
     /** Adds a exception type that can be thrown from this method
         NOTE: This isn't enforced by the JVM. This is for reference only. A method can throw exceptions not declared to be thrown 
         @param type The type of exception that can be thrown 
     */
-    public final void addThrow(Type.Class type) {
-        thrownExceptions.put(type, cp.add(type));
-    }
+    public final void addThrow(Type.Class type) { thrownExceptions.put(type, type); }
     
     private final void grow() { if(size == capacity) grow(size+1); }
     private final void grow(int newCap) {
         if(capacity == NO_CODE) throw new IllegalStateException("method can't have code");
-        if(capacity == FINISHED) throw new IllegalStateException("method has been finished");
         if(newCap <= capacity) return;
         newCap = Math.max(newCap, capacity == 0 ? 256 : capacity*2);
         
@@ -220,7 +478,7 @@ public class MethodGen implements CGConst {
                 }
                 if(n >= -128 && n <= 127) { op = BIPUSH; arg = N(n); } 
                 else if(n >= -32767 && n <= 32767) { op = SIPUSH; arg = N(n); }
-                else { arg = cp.add(N(n)); }
+                else { arg = N(n); }
                 break;
             case ILOAD: case ISTORE: case LLOAD: case LSTORE: case FLOAD:
             case FSTORE: case DLOAD: case DSTORE: case ALOAD: case ASTORE:
@@ -269,23 +527,18 @@ public class MethodGen implements CGConst {
                 
                 if(arg instanceof Long) {
                     long l = ((Long)arg).longValue();
-                    if(l == 0L) { this.op[pos] = LCONST_0; return; }
-                    if(l == 1L) { this.op[pos] = LCONST_1; return; }
+                    if(l == 0L || l == 1L) {
+                        this.op[pos] = l == 0L ? LCONST_0 : LCONST_1;
+                        this.arg[pos] = null; 
+                        return;
+                    }
+                    op = LDC2_W;
+                } else if(arg instanceof Double) {
+                    op = LDC2_W;
                 }
-                
-                if(arg instanceof Long || arg instanceof Double) op = LDC2_W;
                 break;
-            case INVOKEINTERFACE: {
-                break;
-            }
         }
-        int opdata = OP_DATA[op&0xff];
-        if((opdata&OP_CPENT_FLAG) != 0 && !(arg instanceof ConstantPool.Ent)) {
-            if (op==INVOKEINTERFACE) arg = cp.add(arg, true);
-            else arg = cp.add(arg);
-        }
-        else if((opdata&OP_VALID_FLAG) == 0)
-            throw new IllegalArgumentException("unknown bytecode");
+        if((OP_DATA[op&0xff]&OP_VALID_FLAG) == 0) throw new IllegalArgumentException("unknown bytecode");
         this.op[pos] = op;
         this.arg[pos] = arg;
     }
@@ -346,6 +599,12 @@ public class MethodGen implements CGConst {
         public Pair(int i1, int i2) { this.i1 = i1; this.i2 = i2; }
     }
     
+    public static class MultiANewArray {
+        public Type.Class type;
+        public int dims;
+        public MultiANewArray(Type.Class type, int dims) { this.type = type; this.dims = dims; }
+    }
+    
     public static class Wide {
         public final byte op;
         public final int varNum;
@@ -364,11 +623,50 @@ public class MethodGen implements CGConst {
         @exception IllegalStateException if the data for a method is in an inconsistent state (required arguments missing, etc)
         @exception Exn if the byteocode could not be generated for any other reason (constant pool full, etc)
     */
-    public void finish() {
-        try {
-            _finish();
-        } catch(IOException e) {
-            throw new Error("should never happen");
+    void finish(ConstantPool cp) {
+        cp.addUtf8(name);
+        cp.addUtf8(Type.methodTypeDescriptor(args,ret));
+        
+        for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
+            cp.add(e.nextElement());
+        
+        if(size == NO_CODE) return;
+        for(int i=0;i<exnTable.size();i++)
+            ((ExnTableEnt)exnTable.elementAt(i)).finish(cp);
+        
+        // We'll set these correctly later
+        if((flags & (ACC_NATIVE|ACC_ABSTRACT))==0) attrs.put("Code","");
+        if(thrownExceptions.size() > 0) attrs.put("Exceptions","");
+        attrs.finish(cp);
+        codeAttrs.finish(cp);
+        
+        cparg = new ConstantPool.Ent[size];
+        
+        for(int i=0, p=0;i<size;i++) {
+            switch(op[i]) {
+                case LDC:
+                case LDC_W:
+                case LDC2_W:
+                case GETSTATIC:
+                case PUTSTATIC:
+                case GETFIELD:
+                case PUTFIELD:
+                case INVOKEVIRTUAL:
+                case INVOKESPECIAL:
+                case INVOKESTATIC:
+                case NEW:
+                case ANEWARRAY:
+                case CHECKCAST:
+                case INSTANCEOF:
+                    cparg[i] = cp.add(arg[i]);
+                    break;
+                case INVOKEINTERFACE:
+                    cparg[i] = cp.add(new ConstantPool.InterfaceMethodKey((Type.Class.Method)arg[i]));
+                    break;
+                case MULTIANEWARRAY:
+                    cparg[i] = cp.add(((MultiANewArray)arg[i]).type);
+                    break;
+            }
         }
     }
     
@@ -382,15 +680,19 @@ public class MethodGen implements CGConst {
             target = ((Integer)arg).intValue();
         }
         if(target < 0 || target >= size)
-            throw new IllegalStateException("invalid target address");
+            throw new IllegalStateException("invalid target address " + target + "/" + size);
         return arg;
     }
     
-    private void _finish() throws IOException {
-        if(size == FINISHED) return;
-        
-        cp.stable();
-        
+    private void generateCode(ConstantPool cp) {
+        try {
+            _generateCode(cp);
+        } catch(IOException e) {
+            throw new Error("should never happen");
+        }
+    }
+    
+    private void _generateCode(ConstantPool cp) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutput o = new DataOutputStream(baos);
     
@@ -441,6 +743,9 @@ public class MethodGen implements CGConst {
                     }
                     continue;
                 }
+                case WIDE:
+                    p += ((Wide)arg[i]).op == IINC ? 5 : 3;
+                    continue;
                 // May need widening
                 case ILOAD: case ISTORE: case LLOAD: case LSTORE: case FLOAD:
                 case FSTORE: case DLOAD: case DSTORE: case ALOAD: case ASTORE:
@@ -449,6 +754,8 @@ public class MethodGen implements CGConst {
                     if(arg > 255) {
                         this.op[i] = WIDE;
                         this.arg[i] = new Wide(op, arg);
+                        p += 4;
+                        continue;
                     }
                     break;
                 }
@@ -457,16 +764,22 @@ public class MethodGen implements CGConst {
                     if(pair.i1 > 255 || pair.i2 < -128 || pair.i2 > 127) {
                         this.op[i] = WIDE;
                         this.arg[i] = new Wide(IINC, pair.i1, pair.i2);
+                        p += 6;
+                        continue;
                     }
                     break;
                 }
                 case LDC:
-                    j = cp.getIndex((ConstantPool.Ent)arg[i]);
-                    if(j >= 256) this.op[i] = op = LDC_W;
+                    j = cp.getIndex(cparg[i]);
+                    if(j >= 256) {
+                        this.op[i] = op = LDC_W;
+                        p += 3;
+                        continue;
+                    }
                     break;
                 default:
             }
-            if((j = (opdata&OP_ARG_LENGTH_MASK)) == 7) throw new Error("shouldn't be here");
+            if((j = (opdata&OP_ARG_LENGTH_MASK)) == 7) throw new Error("shouldn't be here " + Integer.toString(op&0xff,16));
             p += 1 + j;
         }
         
@@ -566,14 +879,25 @@ public class MethodGen implements CGConst {
                     if(wide.op == IINC) o.writeShort(wide.n);
                     break;
                 }
-                    
+                case MULTIANEWARRAY: {
+                    o.writeShort(cp.getIndex(cparg[i]));
+                    int v = ((MultiANewArray) arg).dims;
+                    if(v >= 256) throw new ClassFile.Exn("overflow of dimensions in multianewarray");
+                    o.writeByte(v);
+                    break;
+                }
+                case INVOKEINTERFACE:
+                    o.writeShort(cp.getIndex(cparg[i]));
+                    o.writeByte(((Type.Class.Method)arg).argTypes.length + 1);
+                    o.writeByte(0);
+                    break;
                 default:
                     if((opdata & OP_BRANCH_FLAG) != 0) {
                         int v = pc[((Integer)arg).intValue()] - pc[i];
                         if(v < -32768 || v > 32767) throw new ClassFile.Exn("overflow of s2 offset");
                         o.writeShort(v);
                     } else if((opdata & OP_CPENT_FLAG) != 0) {
-                        int v = cp.getIndex((ConstantPool.Ent)arg);
+                        int v = cp.getIndex(cparg[i]);
                         if(argLength == 1) o.writeByte(v);
                         else if(argLength == 2) o.writeShort(v);
                         else throw new Error("should never happen");
@@ -582,10 +906,10 @@ public class MethodGen implements CGConst {
                     } else {
                         int iarg  = ((Integer)arg).intValue();
                         if(argLength == 1) {
-                            if(iarg < -128 || iarg >= 256) throw new ClassFile.Exn("overflow of s/u1 option");
+                            if((opdata & OP_UNSIGNED_FLAG) != 0 ? iarg >= 256 : (iarg < -128 || iarg >= 128)) throw new ClassFile.Exn("overflow of s/u1 option");
                             o.writeByte(iarg);
                         } else if(argLength == 2) {
-                            if(iarg < -32767 || iarg >= 65536) throw new ClassFile.Exn("overflow of s/u2 option"); 
+                            if((opdata & OP_UNSIGNED_FLAG) != 0 ? iarg >= 65536 : (iarg < -32768 || iarg >= 32768)) throw new ClassFile.Exn("overflow of s/u2 option");
                             o.writeShort(iarg);
                         } else {
                             throw new Error("should never happen");
@@ -598,32 +922,36 @@ public class MethodGen implements CGConst {
         //if(baos.size() - 8 != codeSize) throw new Error("we didn't output what we were supposed to");
         
         o.writeShort(exnTable.size());
-        for(Enumeration e = exnTable.keys();e.hasMoreElements();)
-            ((ExnTableEnt)exnTable.get(e.nextElement())).dump(o, pc, codeSize);
+        for(i=0;i<exnTable.size();i++)
+            ((ExnTableEnt)exnTable.elementAt(i)).dump(o, pc, codeSize, cp);
         
-        o.writeShort(codeAttrs.size());
-        codeAttrs.dump(o);
-        
+        codeAttrs.dump(o,cp);
         baos.close();
         
         byte[] codeAttribute = baos.toByteArray();
-        attrs.add("Code", codeAttribute);
-        
-        baos.reset();
-        o.writeShort(thrownExceptions.size());
-        for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
-            o.writeShort(cp.getIndex((ConstantPool.Ent)thrownExceptions.get(e.nextElement())));
-        attrs.add("Exceptions", baos.toByteArray());
-        
-        size = capacity = FINISHED;        
+        attrs.put("Code", codeAttribute);        
     }
         
-    void dump(DataOutput o) throws IOException {
+    void generateExceptions(ConstantPool cp) throws IOException {
+        if(thrownExceptions.size() > 0) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream o = new DataOutputStream(baos);
+            o.writeShort(thrownExceptions.size());
+            for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
+                o.writeShort(cp.getIndex(thrownExceptions.get(e.nextElement())));
+            baos.close();
+            attrs.put("Exceptions", baos.toByteArray());
+        }
+    }
+    
+    void dump(DataOutput o, ConstantPool cp) throws IOException {
+        if((flags & (ACC_NATIVE|ACC_ABSTRACT))==0) generateCode(cp);
+        generateExceptions(cp);
+        
         o.writeShort(flags);
         o.writeShort(cp.getUtf8Index(name));
-        o.writeShort(cp.getUtf8Index(owner.getType().method(name, ret, args).getDescriptor()));
-        o.writeShort(attrs.size());
-        attrs.dump(o);
+        o.writeShort(cp.getUtf8Index(Type.methodTypeDescriptor(args,ret)));
+        attrs.dump(o,cp);
     }
     
     /** Negates the IF* instruction, <i>op</i>  (IF_ICMPGT -> IF_ICMPLE, IFNE -> IFEQ,  etc)
@@ -666,30 +994,32 @@ public class MethodGen implements CGConst {
     
     private static final int OP_BRANCH_FLAG = 1<<3;
     private static final int OP_CPENT_FLAG = 1<<4;
-    private static final int OP_VALID_FLAG = 1<<5;
+    private static final int OP_UNSIGNED_FLAG = 1<<5;
+    private static final int OP_VALID_FLAG = 1<<6;
     private static final int OP_ARG_LENGTH_MASK = 7;
     private static final boolean OP_VALID(byte op) { return (OP_DATA[op&0xff] & OP_VALID_FLAG) != 0; }
     private static final int OP_ARG_LENGTH(byte op) { return (OP_DATA[op&0xff]&OP_ARG_LENGTH_MASK); }
     private static final boolean OP_CPENT(byte op) { return (OP_DATA[op&0xff]&OP_CPENT_FLAG) != 0; }
     private static final boolean OP_BRANCH(byte op) { return (OP_DATA[op&0xff]&OP_BRANCH_FLAG ) != 0; }
+    private static final boolean OP_UNSIGNED(byte op) { return (OP_DATA[op&0xff]&OP_UNSIGNED_FLAG ) != 0; }
     
     // Run perl -x src/org/ibex/classgen/CGConst.java to generate this
     private static final byte[] OP_DATA = {
-            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-            0x21, 0x22, 0x31, 0x32, 0x32, 0x21, 0x21, 0x21, 0x21, 0x21, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x21, 0x21, 0x21, 0x21, 0x21, 0x20, 0x20, 0x20, 0x20, 0x20,
-            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-            0x20, 0x20, 0x20, 0x20, 0x22, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-            0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x21, 0x27, 0x27, 0x20, 0x20, 0x20, 0x20,
-            0x20, 0x20, 0x32, 0x32, 0x32, 0x32, 0x32, 0x32, 0x32, 0x32, 0x01, 0x32, 0x21, 0x32, 0x20, 0x20,
-            0x32, 0x32, 0x20, 0x20, 0x27, 0x23, 0x2a, 0x2a, 0x2c, 0x2c, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-            0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-            0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-            0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01
+        0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 
+        0x41, 0x42, 0x51, 0x52, 0x52, 0x61, 0x61, 0x61, 0x61, 0x61, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 
+        0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 
+        0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x61, 0x61, 0x61, 0x61, 0x61, 0x40, 0x40, 0x40, 0x40, 0x40, 
+        0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 
+        0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 
+        0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 
+        0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 
+        0x40, 0x40, 0x40, 0x40, 0x42, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 
+        0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x4a, 0x4a, 0x4a, 0x4a, 0x4a, 0x4a, 0x4a, 
+        0x4a, 0x4a, 0x4a, 0x4a, 0x4a, 0x4a, 0x4a, 0x4a, 0x4a, 0x41, 0x47, 0x47, 0x40, 0x40, 0x40, 0x40, 
+        0x40, 0x40, 0x52, 0x52, 0x52, 0x52, 0x52, 0x52, 0x52, 0x54, 0x01, 0x52, 0x41, 0x52, 0x40, 0x40, 
+        0x52, 0x52, 0x40, 0x40, 0x47, 0x53, 0x4a, 0x4a, 0x4c, 0x4c, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 
+        0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 
+        0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 
+        0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01
     };
 }
