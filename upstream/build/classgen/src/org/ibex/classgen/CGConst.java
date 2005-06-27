@@ -20,11 +20,12 @@ public interface CGConst {
     public static final int SYNCHRONIZED = 0x0020;
     public static final int NATIVE       = 0x0100;
     public static final int STRICT       = 0x0800;
+    public static final int VALID_METHOD_FLAGS = PUBLIC|PRIVATE|PROTECTED|STATIC|FINAL|SYNCHRONIZED|NATIVE|ABSTRACT|STRICT;
 
     // Field only
     public static final int VOLATILE  = 0x0040;
     public static final int TRANSIENT = 0x0080;
-    
+
     
     // Constant Pool Stuff
     public static final int CONSTANT_UTF8 = 1;

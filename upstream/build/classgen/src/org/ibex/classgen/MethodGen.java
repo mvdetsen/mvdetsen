@@ -10,10 +10,7 @@ public class MethodGen implements CGConst {
     
     private static final int NO_CODE = -1;
 
-    private final ClassFile cf;
-    private final String name;
-    private final Type ret;
-    private final Type[] args;
+    private final Type.Class.Method method;
     private final int flags;
     private final ClassFile.AttrGen attrs;
     private final ClassFile.AttrGen codeAttrs;
@@ -78,24 +75,13 @@ public class MethodGen implements CGConst {
         };
         
         sb.append("  ").append(ClassFile.flagsToString(flags,false));
-
-        if (name.equals("<clinit>")) sb.append("static ");
-        else {
-            if (name.equals("<init>"))
-                sb.append(constructorName);
-            else
-                sb.append(ret.debugToString()).append(" ").append(name);
-            sb.append("(");
-            for(int i=0; i<args.length; i++)
-                sb.append((i==0?"":", ")+args[i].debugToString());
-            sb.append(") ");
-            if(thrownExceptions.size() > 0) {
-                sb.append("throws");
-                for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
-                    sb.append(" ").append(((Type.Class)e.nextElement()).debugToString()).append(",");
-                sb.setLength(sb.length()-1);
-                sb.append(" ");
-            }
+        sb.append(method.debugToString());
+        if(thrownExceptions.size() > 0) {
+            sb.append("throws");
+            for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
+                sb.append(" ").append(((Type.Class)e.nextElement()).debugToString()).append(",");
+            sb.setLength(sb.length()-1);
+            sb.append(" ");
         }
         if((flags & (NATIVE|ABSTRACT))==0) {
             sb.append("{\n");
@@ -118,17 +104,11 @@ public class MethodGen implements CGConst {
         }
     }
 
-    MethodGen(ClassFile cf, DataInput in, ConstantPool cp, boolean ownerInterface) throws IOException {
-        this.cf = cf;
-        flags = in.readShort();
-        if((flags & ~(PUBLIC|PRIVATE|PROTECTED|STATIC|FINAL|SYNCHRONIZED|NATIVE|ABSTRACT|STRICT)) != 0)
-            throw new ClassFile.ClassReadExn("invalid flags");
-        this.name = cp.getUtf8KeyByIndex(in.readShort());
-        //System.err.println("Processing " + name + "...");
-        Type.Class.Method m = cf.getType().method(name+cp.getUtf8KeyByIndex(in.readShort()));
-        this.ret = m.returnType;
-        this.args = new Type[m.getNumArgs()];
-        for(int i=0; i<args.length; i++) args[i] = m.getArgType(i);
+    MethodGen(Type.Class c, DataInput in, ConstantPool cp, boolean ownerInterface) throws IOException {
+        this.flags = in.readShort();
+        if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new ClassFile.ClassReadExn("invalid flags");
+        String name = cp.getUtf8KeyByIndex(in.readShort());
+        this.method = c.method(name+cp.getUtf8KeyByIndex(in.readShort()));
         this.attrs = new ClassFile.AttrGen(in,cp);
         
         if((flags & (NATIVE|ABSTRACT))==0)  {
@@ -282,7 +262,8 @@ public class MethodGen implements CGConst {
             }
             add(op,arg);
         }
-        if(pc != codeLen) throw new ClassFile.ClassReadExn("didn't read enough code (" + pc + "/" + codeLen + " in " + name + ")");
+        if(pc != codeLen)
+            throw new ClassFile.ClassReadExn("didn't read enough code (" + pc + "/" + codeLen + " in " + method.name + ")");
         for(int i=0;i<size();i++) {
             switch(op[i]) {
                 case TABLESWITCH:
@@ -313,13 +294,9 @@ public class MethodGen implements CGConst {
         return map;
     }
 
-    MethodGen(ClassFile cf, String name, Type ret, Type[] args, int flags, boolean ownerInterface) {
-        if((flags & ~(PUBLIC|PRIVATE|PROTECTED|STATIC|FINAL|SYNCHRONIZED|NATIVE|ABSTRACT|STRICT)) != 0)
-            throw new IllegalArgumentException("invalid flags");
-        this.cf = cf;
-        this.name = name;
-        this.ret = ret;
-        this.args = args;
+    MethodGen(Type.Class c, String name, Type ret, Type[] args, int flags, boolean ownerInterface) {
+        if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
+        this.method = c.method(name, ret, args);
         this.flags = flags;
         
         attrs = new ClassFile.AttrGen();
@@ -624,8 +601,8 @@ public class MethodGen implements CGConst {
         @exception Exn if the byteocode could not be generated for any other reason (constant pool full, etc)
     */
     void finish(ConstantPool cp) {
-        cp.addUtf8(name);
-        cp.addUtf8(Type.methodTypeDescriptor(args,ret));
+        cp.addUtf8(method.name);
+        cp.addUtf8(method.getDescriptor());
         
         for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
             cp.add(e.nextElement());
@@ -949,8 +926,8 @@ public class MethodGen implements CGConst {
         generateExceptions(cp);
         
         o.writeShort(flags);
-        o.writeShort(cp.getUtf8Index(name));
-        o.writeShort(cp.getUtf8Index(Type.methodTypeDescriptor(args,ret)));
+        o.writeShort(cp.getUtf8Index(method.name));
+        o.writeShort(cp.getUtf8Index(method.getDescriptor()));
         attrs.dump(o,cp);
     }
     

@@ -152,6 +152,21 @@ public class Type {
             public final Type   returnType;
             public Type getArgType(int i) { return argTypes[i]; }
             public int  getNumArgs()      { return argTypes.length; }
+            public String debugToString() {
+                StringBuffer sb = new StringBuffer();
+                if (name.equals("<clinit>")) sb.append("static ");
+                else {
+                    if (name.equals("<init>"))
+                        sb.append(Class.this.getShortName());
+                    else
+                        sb.append(returnType).append(" ").append(name);
+                    sb.append("(");
+                    for(int i=0; i<argTypes.length; i++)
+                        sb.append((i==0?"":", ")+argTypes[i].debugToString());
+                    sb.append(") ");
+                }
+                return sb.toString();
+            }
             private Method(String name, Type returnType, Type[] argTypes) {
                 super(name);
                 this.argTypes = argTypes;
