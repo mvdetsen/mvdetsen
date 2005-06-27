@@ -26,82 +26,19 @@ public class MethodGen implements CGConst {
     private Object[] arg;
     private ConstantPool.Ent[] cparg;
     
-    public void debugToString(StringBuffer sb, String constructorName) {
-        // This is intentionally a local variable so it can be removed by gcclass
-        final String[] OP_NAMES = new String[]{
-            "nop", "aconst_null", "iconst_m1", "iconst_0", "iconst_1", "iconst_2", 
-            "iconst_3", "iconst_4", "iconst_5", "lconst_0", "lconst_1", "fconst_0", 
-            "fconst_1", "fconst_2", "dconst_0", "dconst_1", "bipush", "sipush", 
-            "ldc", "ldc_w", "ldc2_w", "iload", "lload", "fload", 
-            "dload", "aload", "iload_0", "iload_1", "iload_2", "iload_3", 
-            "lload_0", "lload_1", "lload_2", "lload_3", "fload_0", "fload_1", 
-            "fload_2", "fload_3", "dload_0", "dload_1", "dload_2", "dload_3", 
-            "aload_0", "aload_1", "aload_2", "aload_3", "iaload", "laload", 
-            "faload", "daload", "aaload", "baload", "caload", "saload", 
-            "istore", "lstore", "fstore", "dstore", "astore", "istore_0", 
-            "istore_1", "istore_2", "istore_3", "lstore_0", "lstore_1", "lstore_2", 
-            "lstore_3", "fstore_0", "fstore_1", "fstore_2", "fstore_3", "dstore_0", 
-            "dstore_1", "dstore_2", "dstore_3", "astore_0", "astore_1", "astore_2", 
-            "astore_3", "iastore", "lastore", "fastore", "dastore", "aastore", 
-            "bastore", "castore", "sastore", "pop", "pop2", "dup", 
-            "dup_x1", "dup_x2", "dup2", "dup2_x1", "dup2_x2", "swap", 
-            "iadd", "ladd", "fadd", "dadd", "isub", "lsub", 
-            "fsub", "dsub", "imul", "lmul", "fmul", "dmul", 
-            "idiv", "ldiv", "fdiv", "ddiv", "irem", "lrem", 
-            "frem", "drem", "ineg", "lneg", "fneg", "dneg", 
-            "ishl", "lshl", "ishr", "lshr", "iushr", "lushr", 
-            "iand", "land", "ior", "lor", "ixor", "lxor", 
-            "iinc", "i2l", "i2f", "i2d", "l2i", "l2f", 
-            "l2d", "f2i", "f2l", "f2d", "d2i", "d2l", 
-            "d2f", "i2b", "i2c", "i2s", "lcmp", "fcmpl", 
-            "fcmpg", "dcmpl", "dcmpg", "ifeq", "ifne", "iflt", 
-            "ifge", "ifgt", "ifle", "if_icmpeq", "if_icmpne", "if_icmplt", 
-            "if_icmpge", "if_icmpgt", "if_icmple", "if_acmpeq", "if_acmpne", "goto", 
-            "jsr", "ret", "tableswitch", "lookupswitch", "ireturn", "lreturn", 
-            "freturn", "dreturn", "areturn", "return", "getstatic", "putstatic", 
-            "getfield", "putfield", "invokevirtual", "invokespecial", "invokestatic", "invokeinterface", 
-            "", "new", "newarray", "anewarray", "arraylength", "athrow", 
-            "checkcast", "instanceof", "monitorenter", "monitorexit", "wide", "multianewarray", 
-            "ifnull", "ifnonnull", "goto_w", "jsr_w", "", "", 
-            "", "", "", "", "", "", 
-            "", "", "", "", "", "", 
-            "", "", "", "", "", "", 
-            "", "", "", "", "", "", 
-            "", "", "", "", "", "", 
-            "", "", "", "", "", "", 
-            "", "", "", "", "", "", 
-            "", "", "", "", "", "", 
-            "", "", "", ""
-        };
+    // Constructors //////////////////////////////////////////////////////////////////////////////
+
+    MethodGen(Type.Class.Method method, int flags) {
+        if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
+        this.method = method;
+        this.flags = flags;
         
-        sb.append("  ").append(ClassFile.flagsToString(flags,false));
-        sb.append(method.debugToString());
-        if(thrownExceptions.size() > 0) {
-            sb.append("throws");
-            for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
-                sb.append(" ").append(((Type.Class)e.nextElement()).debugToString()).append(",");
-            sb.setLength(sb.length()-1);
-            sb.append(" ");
-        }
-        if((flags & (NATIVE|ABSTRACT))==0) {
-            sb.append("{\n");
-            for(int i=0;i<size();i++) {
-                sb.append("    ");
-                for(int j=i==0?1:i;j<10000;j*=10) sb.append(" ");
-                sb.append(i).append(": ");
-                sb.append(OP_NAMES[op[i]&0xff]);
-                String s = null;
-                if(arg[i] instanceof Type) s = ((Type)arg[i]).debugToString();
-                else if(arg[i] instanceof Type.Class.Member) s = ((Type.Class.Member)arg[i]).toString();
-                else if(arg[i] instanceof String) s = "\"" + s + "\"";
-                else if(arg[i] != null) s = arg[i].toString();
-                if(s != null) sb.append(" ").append(s);
-                sb.append("\n");
-            }
-            sb.append("  }\n");
-        } else {
-            sb.append(";");
-        }
+        attrs = new ClassFile.AttrGen();
+        codeAttrs = new ClassFile.AttrGen();
+        
+        if (((flags & INTERFACE) != 0) || (flags & (ABSTRACT|NATIVE)) != 0) size = capacity = -1;
+        
+        maxLocals = Math.max(args.length + (flags&STATIC)==0 ? 1 : 0, 4);
     }
 
     MethodGen(Type.Class c, DataInput in, ConstantPool cp) throws IOException {
@@ -111,9 +48,9 @@ public class MethodGen implements CGConst {
         this.method = c.method(name+cp.getUtf8KeyByIndex(in.readShort()));
         this.attrs = new ClassFile.AttrGen(in,cp);
         
-        if((flags & (NATIVE|ABSTRACT))==0)  {
+        if ((flags & (NATIVE|ABSTRACT))==0)  {
             byte[] codeAttr = (byte[]) attrs.get("Code");
-            if(codeAttr == null) throw new ClassFile.ClassReadExn("code attr expected");
+            if (codeAttr == null) throw new ClassFile.ClassReadExn("code attr expected");
             DataInputStream ci = new DataInputStream(new ByteArrayInputStream(codeAttr));
             maxStack = ci.readUnsignedShort();
             maxLocals = ci.readUnsignedShort();
@@ -133,7 +70,7 @@ public class MethodGen implements CGConst {
             codeAttrs = new ClassFile.AttrGen();
         }
 
-        if(attrs.contains("Exceptions")) {
+        if (attrs.contains("Exceptions")) {
             DataInputStream ei = new DataInputStream(new ByteArrayInputStream((byte[]) attrs.get("Exceptions")));
             int exnCount = ei.readUnsignedShort();
             while(exnCount-- > 0) {
@@ -142,6 +79,8 @@ public class MethodGen implements CGConst {
             }
         }
     }
+
+    // Parsing //////////////////////////////////////////////////////////////////////////////
         
     final int[] parseCode(DataInputStream in, int codeLen, ConstantPool cp) throws IOException {
         int[] map = new int[codeLen];
@@ -151,12 +90,12 @@ public class MethodGen implements CGConst {
             byte op = in.readByte();
             int opdata = OP_DATA[op&0xff];
             //System.err.println("Processing " + Integer.toString(op&0xff,16) + " at " + pc);
-            if((opdata&OP_VALID_FLAG)==0) throw new ClassFile.ClassReadExn("invalid bytecode " + (op&0xff));
+            if ((opdata&OP_VALID_FLAG)==0) throw new ClassFile.ClassReadExn("invalid bytecode " + (op&0xff));
             int argLength = opdata & OP_ARG_LENGTH_MASK;
             int mypc = pc;
             map[mypc] = size();
             pc += 1 + (argLength == 7 ? 0 : argLength);
-            if(argLength == 0)  { add(op); continue; }
+            if (argLength == 0)  { add(op); continue; }
             Object arg;
             switch(op) {
                 case IINC:
@@ -164,12 +103,12 @@ public class MethodGen implements CGConst {
                     break;
                 case TABLESWITCH:
                 case LOOKUPSWITCH:
-                    SI si;
-                    for(;(pc&3) != 0;pc++) if(in.readByte() != 0) throw new ClassFile.ClassReadExn("invalid padding");
+                    Switch si;
+                    for(;(pc&3) != 0;pc++) if (in.readByte() != 0) throw new ClassFile.ClassReadExn("invalid padding");
                     int def = in.readInt() + mypc;
                     pc += 4;
-                    if(op == LOOKUPSWITCH) {
-                        LSI lsi = new LSI(in.readInt());
+                    if (op == LOOKUPSWITCH) {
+                        Switch.Lookup lsi = new Switch.Lookup(in.readInt());
                         pc += 4;
                         for(int i=0;i<lsi.size();i++) {
                             lsi.setVal(i,in.readInt());
@@ -181,7 +120,7 @@ public class MethodGen implements CGConst {
                         int lo = in.readInt();
                         int hi = in.readInt();
                         pc += 8;
-                        TSI tsi = new TSI(lo,hi);
+                        Switch.Table tsi = new Switch.Table(lo,hi);
                         for(int i=0;i<tsi.size();i++) { tsi.setTarget(i,in.readInt() + mypc); pc += 4; }
                         si = tsi;
                     }
@@ -201,13 +140,13 @@ public class MethodGen implements CGConst {
                     break;
                 case INVOKEINTERFACE: {
                     ConstantPool.Ent ent = cp.getByIndex(in.readUnsignedShort());
-                    if(ent.tag != CONSTANT_INTERFACEMETHODREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode");
+                    if (ent.tag != CONSTANT_INTERFACEMETHODREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode");
                     arg = ((ConstantPool.InterfaceMethodKey)ent.key()).method;
-                    if(in.readByte() == 0 || in.readByte() != 0) throw new ClassFile.ClassReadExn("illegal count or 0 arg to invokeinterface");
+                    if (in.readByte() == 0 || in.readByte() != 0) throw new ClassFile.ClassReadExn("illegal count or 0 arg to invokeinterface");
                     break;
                 }
                 default:
-                    if((opdata&OP_CPENT_FLAG)!=0) {
+                    if ((opdata&OP_CPENT_FLAG)!=0) {
                         ConstantPool.Ent ent = cp.getByIndex(argLength == 2 ? in.readUnsignedShort() : argLength == 1 ? in.readUnsignedByte() : -1);
                         int tag = ent.tag;
                         Object key = ent.key();
@@ -231,18 +170,18 @@ public class MethodGen implements CGConst {
                             case PUTSTATIC:
                             case GETFIELD:
                             case PUTFIELD:
-                                if(tag != CONSTANT_FIELDREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
+                                if (tag != CONSTANT_FIELDREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
                                 break;
                             case INVOKEVIRTUAL:
                             case INVOKESPECIAL:
                             case INVOKESTATIC:
-                                if(tag != CONSTANT_METHODREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
+                                if (tag != CONSTANT_METHODREF) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
                                 break;
                             case NEW:
                             case ANEWARRAY:
                             case CHECKCAST:
                             case INSTANCEOF:
-                                if(tag != CONSTANT_CLASS) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
+                                if (tag != CONSTANT_CLASS) throw new ClassFile.ClassReadExn("illegal argument to bytecode 0x" + Integer.toString(op&0xff,16));
                                 break;                        
                             default:
                                 throw new Error("should never happen");
@@ -252,40 +191,40 @@ public class MethodGen implements CGConst {
                         // treat everything else (including branches for now) as plain old ints
                         int n;
                         boolean unsigned = (opdata&OP_UNSIGNED_FLAG)!=0;
-                        if(argLength == 1) n = unsigned ? in.readUnsignedByte() : in.readByte();
-                        else if(argLength == 2) n = unsigned ? in.readUnsignedShort() : in.readShort();
+                        if (argLength == 1) n = unsigned ? in.readUnsignedByte() : in.readByte();
+                        else if (argLength == 2) n = unsigned ? in.readUnsignedShort() : in.readShort();
                         else throw new Error("should never happen");
-                        if((opdata&OP_BRANCH_FLAG)!=0) n += mypc;
+                        if ((opdata&OP_BRANCH_FLAG)!=0) n += mypc;
                         arg = N(n);
                     }
                     break;
             }
             add(op,arg);
         }
-        if(pc != codeLen)
+        if (pc != codeLen)
             throw new ClassFile.ClassReadExn("didn't read enough code (" + pc + "/" + codeLen + " in " + method.name + ")");
         for(int i=0;i<size();i++) {
             switch(op[i]) {
                 case TABLESWITCH:
                 case LOOKUPSWITCH:
                 {
-                    SI si = (SI) arg[i];
+                    Switch si = (Switch) arg[i];
                     
                     int pos = map[si.getDefaultTarget()];
-                    if(pos < 0)  throw new ClassFile.ClassReadExn("default target points to invalid bytecode: " + si.getDefaultTarget());
+                    if (pos < 0)  throw new ClassFile.ClassReadExn("default target points to invalid bytecode: " + si.getDefaultTarget());
                     si.setDefaultTarget(pos);
                     
                     for(int j=0;j<si.size();j++) {
                         pos = map[si.getTarget(j)];
-                        if(pos < 0)  throw new ClassFile.ClassReadExn("target points to invalid bytecode");
+                        if (pos < 0)  throw new ClassFile.ClassReadExn("target points to invalid bytecode");
                         si.setTarget(j,pos);
                     }
                     break;
                 }
                 default:
-                    if(OP_BRANCH(op[i])) {
+                    if (OP_BRANCH(op[i])) {
                         int pos = map[((Integer)arg[i]).intValue()];
-                        if(pos < 0)  throw new ClassFile.ClassReadExn("branch points to invalid bytecode");
+                        if (pos < 0)  throw new ClassFile.ClassReadExn("branch points to invalid bytecode");
                         arg[i] = N(pos);
                     }
                     break;
@@ -294,19 +233,8 @@ public class MethodGen implements CGConst {
         return map;
     }
 
-    MethodGen(Type.Class.Method method, int flags) {
-        if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
-        this.method = method;
-        this.flags = flags;
-        
-        attrs = new ClassFile.AttrGen();
-        codeAttrs = new ClassFile.AttrGen();
-        
-        if (((flags & INTERFACE) != 0) || (flags & (ABSTRACT|NATIVE)) != 0) size = capacity = -1;
-        
-        maxLocals = Math.max(args.length + (flags&STATIC)==0 ? 1 : 0, 4);
-    }
-    
+    // Exception Table //////////////////////////////////////////////////////////////////////////////
+   
     class ExnTableEnt {
         final int start;
         final int end;
@@ -320,9 +248,9 @@ public class MethodGen implements CGConst {
             int index = in.readUnsignedShort();
             this.type = index == 0 ? null : (Type.Class) cp.getKeyByIndex(index);
             int max = bytecodeMap.length;
-            if(startPC >= max || bytecodeMap[startPC] < 0) throw new ClassFile.ClassReadExn("invalid startPC");
-            if(endPC >= max || bytecodeMap[endPC] < 0) throw new ClassFile.ClassReadExn("invalid startPC");
-            if(handlerPC >= max || bytecodeMap[handlerPC] < 0) throw new ClassFile.ClassReadExn("invalid startPC");
+            if (startPC >= max || bytecodeMap[startPC] < 0) throw new ClassFile.ClassReadExn("invalid startPC");
+            if (endPC >= max || bytecodeMap[endPC] < 0) throw new ClassFile.ClassReadExn("invalid startPC");
+            if (handlerPC >= max || bytecodeMap[handlerPC] < 0) throw new ClassFile.ClassReadExn("invalid startPC");
             this.start = bytecodeMap[startPC];
             this.end = bytecodeMap[endPC];
             this.handler = bytecodeMap[handlerPC];
@@ -333,7 +261,7 @@ public class MethodGen implements CGConst {
             this.handler = handler;
             this.type = type;
         }
-        void finish(ConstantPool cp) { if(type != null) cp.add(type); }
+        void finish(ConstantPool cp) { if (type != null) cp.add(type); }
         void dump(DataOutput o, int[] pc, int endPC, ConstantPool cp) throws IOException {
             o.writeShort(pc[start]);
             o.writeShort(end==pc.length ? endPC : pc[end]);
@@ -358,22 +286,24 @@ public class MethodGen implements CGConst {
     */
     public final void addThrow(Type.Class type) { thrownExceptions.put(type, type); }
     
-    private final void grow() { if(size == capacity) grow(size+1); }
+    private final void grow() { if (size == capacity) grow(size+1); }
     private final void grow(int newCap) {
-        if(capacity == NO_CODE) throw new IllegalStateException("method can't have code");
-        if(newCap <= capacity) return;
+        if (capacity == NO_CODE) throw new IllegalStateException("method can't have code");
+        if (newCap <= capacity) return;
         newCap = Math.max(newCap, capacity == 0 ? 256 : capacity*2);
         
         byte[] op2 = new byte[newCap];
-        if(capacity != 0) System.arraycopy(op, 0, op2, 0, size);
+        if (capacity != 0) System.arraycopy(op, 0, op2, 0, size);
         op = op2;
         
         Object[] arg2 = new Object[newCap];
-        if(capacity != 0) System.arraycopy(arg, 0, arg2, 0, size);
+        if (capacity != 0) System.arraycopy(arg, 0, arg2, 0, size);
         arg = arg2;
         
         capacity = newCap;
     }
+
+    // Accessors //////////////////////////////////////////////////////////////////////////////
     
     /** Returns the size (in instructions) of this method 
         @return The size of the method (in instructions)
@@ -384,7 +314,7 @@ public class MethodGen implements CGConst {
     /** Add a bytecode (with no argument) to the method */
     public final int add(byte op) {
         int s = size;
-        if(s == capacity) grow();
+        if (s == capacity) grow();
         this.op[s] = op;
         size++;
         return s;
@@ -395,17 +325,17 @@ public class MethodGen implements CGConst {
     /** Adds a bytecode, <i>op</i>, with argument <i>arg</i> to the method 
         @return The position of the new bytecode
         */
-    public final int add(byte op, Object arg) { if(capacity == size) grow(); set(size, op, arg); return size++; }
+    public final int add(byte op, Object arg) { if (capacity == size) grow(); set(size, op, arg); return size++; }
     /** Adds a bytecode with a boolean argument - equivalent to add(op, arg?1:0);
         @return The position of the new bytecode
         @see #add(byte, int)
     */
-    public final int add(byte op, boolean arg) { if(capacity == size) grow(); set(size, op, arg); return size++; }
+    public final int add(byte op, boolean arg) { if (capacity == size) grow(); set(size, op, arg); return size++; }
     /** Adds a bytecode with an integer argument. This is equivalent to add(op, new Integer(arg)), but optimized to prevent the allocation when possible
         @return The position of the new bytecode
         @see #add(byte, Object)
     */
-    public final int add(byte op, int arg) { if(capacity == size) grow(); set(size, op, arg); return size++; }
+    public final int add(byte op, int arg) { if (capacity == size) grow(); set(size, op, arg); return size++; }
     
     /** Gets the bytecode at position <i>pos</i>
         @exception ArrayIndexOutOfBoundException if pos < 0 || pos >= size()
@@ -453,14 +383,14 @@ public class MethodGen implements CGConst {
                     case 4:  op = ICONST_4;  break OUTER;
                     case 5:  op = ICONST_5;  break OUTER;
                 }
-                if(n >= -128 && n <= 127) { op = BIPUSH; arg = N(n); } 
-                else if(n >= -32767 && n <= 32767) { op = SIPUSH; arg = N(n); }
+                if (n >= -128 && n <= 127) { op = BIPUSH; arg = N(n); } 
+                else if (n >= -32768 && n <= 32767) { op = SIPUSH; arg = N(n); }
                 else { arg = N(n); }
                 break;
             case ILOAD: case ISTORE: case LLOAD: case LSTORE: case FLOAD:
             case FSTORE: case DLOAD: case DSTORE: case ALOAD: case ASTORE:
-                if(n >= maxLocals) maxLocals = n + 1;
-                if(n >= 0 && n <= 3) {
+                if (n >= maxLocals) maxLocals = n + 1;
+                if (n >= 0 && n <= 3) {
                     byte base = 0;
                     switch(op) {
                         case ILOAD:  base = ILOAD_0;  break;
@@ -499,36 +429,32 @@ public class MethodGen implements CGConst {
                 return;
             case LDC:
                 // set(int, byte, int) always handles these opts itself
-                if(arg instanceof Integer) { set(pos, op, ((Integer)arg).intValue()); return; }
-                if(arg instanceof Boolean) { set(pos, op, ((Boolean)arg).booleanValue()); return; }
+                if (arg instanceof Integer) { set(pos, op, ((Integer)arg).intValue()); return; }
+                if (arg instanceof Boolean) { set(pos, op, ((Boolean)arg).booleanValue()); return; }
                 
-                if(arg instanceof Long) {
+                if (arg instanceof Long) {
                     long l = ((Long)arg).longValue();
-                    if(l == 0L || l == 1L) {
+                    if (l == 0L || l == 1L) {
                         this.op[pos] = l == 0L ? LCONST_0 : LCONST_1;
                         this.arg[pos] = null; 
                         return;
                     }
                     op = LDC2_W;
-                } else if(arg instanceof Double) {
+                } else if (arg instanceof Double) {
                     op = LDC2_W;
                 }
                 break;
         }
-        if((OP_DATA[op&0xff]&OP_VALID_FLAG) == 0) throw new IllegalArgumentException("unknown bytecode");
+        if ((OP_DATA[op&0xff]&OP_VALID_FLAG) == 0) throw new IllegalArgumentException("unknown bytecode");
         this.op[pos] = op;
         this.arg[pos] = arg;
     }
     
-    /** This class represents the arguments to the TABLESWITH and LOOKUPSWITCH bytecodes
-        @see MethodGen.TSI
-        @see MethodGen.LSI
-    */
-    public static abstract class SI {
+    public static abstract class Switch {
         public final Object[] targets;
         public Object defaultTarget;
 
-        SI(int size) { targets = new Object[size]; }
+        Switch(int size) { targets = new Object[size]; }
         public void setTarget(int pos, Object val) { targets[pos] = val; }
         public void setTarget(int pos, int val) { targets[pos] = N(val); }
         public void setDefaultTarget(int val) { setDefaultTarget(N(val)); }
@@ -539,34 +465,31 @@ public class MethodGen implements CGConst {
         public int getDefaultTarget() { return ((Integer)defaultTarget).intValue(); }   
         
         abstract int length();
-    }
     
-    /** This class represents the arguments to the TABLESWITCH bytecode */
-    public static class TSI extends SI {
-        public final int lo;
-        public final int hi;
-        public int defaultTarget = -1;
-        public TSI(int lo, int hi) {
-            super(hi-lo+1);
-            this.lo = lo;
-            this.hi = hi;
+        public static class Table extends Switch {
+            public final int lo;
+            public final int hi;
+            public Table(int lo, int hi) {
+                super(hi-lo+1);
+                this.lo = lo;
+                this.hi = hi;
+            }
+            public void setTargetForVal(int val, Object o) { setTarget(val-lo, o); }
+            public void setTargetForVal(int val, int n) { setTarget(val-lo, n); }
+            
+            int length() { return 12 + targets.length * 4; } // 4bytes/target, hi, lo, default
         }
-        public void setTargetForVal(int val, Object o) { setTarget(val-lo, o); }
-        public void setTargetForVal(int val, int n) { setTarget(val-lo, n); }
-        
-        int length() { return 12 + targets.length * 4; } // 4bytes/target, hi, lo, default
-    }
     
-    /** This class represents the arguments to the LOOKUPSWITCH bytecode */
-    public static class LSI extends SI {
-        public final int[] vals;
-        public LSI(int size) {
-           super(size);
-           this.vals = new int[size];
+        public static class Lookup extends Table {
+            public final int[] vals;
+            public Lookup(int size) {
+                super(size);
+                this.vals = new int[size];
+            }
+            public final void setVal(int pos, int val) { vals[pos] = val; }
+            
+            int length() { return 8 + targets.length * 8; } // key/val per target, default, count
         }
-        public final void setVal(int pos, int val) { vals[pos] = val; }
-        
-        int length() { return 8 + targets.length * 8; } // key/val per target, default, count
     }
     
     /** This class represents the arguments to byecodes that take two integer arguments. */
@@ -607,13 +530,13 @@ public class MethodGen implements CGConst {
         for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
             cp.add(e.nextElement());
         
-        if(size == NO_CODE) return;
+        if (size == NO_CODE) return;
         for(int i=0;i<exnTable.size();i++)
             ((ExnTableEnt)exnTable.elementAt(i)).finish(cp);
         
         // We'll set these correctly later
-        if((flags & (NATIVE|ABSTRACT))==0) attrs.put("Code","");
-        if(thrownExceptions.size() > 0) attrs.put("Exceptions","");
+        if ((flags & (NATIVE|ABSTRACT))==0) attrs.put("Code","");
+        if (thrownExceptions.size() > 0) attrs.put("Exceptions","");
         attrs.finish(cp);
         codeAttrs.finish(cp);
         
@@ -649,14 +572,14 @@ public class MethodGen implements CGConst {
     
     private Object resolveTarget(Object arg) {
         int target;
-        if(arg instanceof PhantomTarget) {
+        if (arg instanceof PhantomTarget) {
             target = ((PhantomTarget)arg).getTarget();
-            if(target == -1) throw new IllegalStateException("unresolved phantom target");
+            if (target == -1) throw new IllegalStateException("unresolved phantom target");
             arg = N(target);
         } else {
             target = ((Integer)arg).intValue();
         }
-        if(target < 0 || target >= size)
+        if (target < 0 || target >= size)
             throw new IllegalStateException("invalid target address " + target + "/" + size);
         return arg;
     }
@@ -684,7 +607,7 @@ public class MethodGen implements CGConst {
             int j;
             maxpc[i] = p;
             
-            if((opdata & OP_BRANCH_FLAG)!= 0) { 
+            if ((opdata & OP_BRANCH_FLAG)!= 0) { 
                 try { 
                     arg[i] = resolveTarget(arg[i]);
                 } catch(RuntimeException e) {
@@ -698,24 +621,24 @@ public class MethodGen implements CGConst {
                 case GOTO:
                 case JSR: {
                     int arg = ((Integer)this.arg[i]).intValue();
-                    if(arg < i && p - maxpc[arg] <= 32768) p += 3; 
+                    if (arg < i && p - maxpc[arg] <= 32768) p += 3; 
                     else p += 5;
                     continue;
                 }
                 case NOP:
-                    if(EMIT_NOPS) p++;
+                    if (EMIT_NOPS) p++;
                     continue;
                 case LOOKUPSWITCH:
                 case TABLESWITCH: {
-                    SI si = (SI) arg[i];
+                    Switch si = (Switch) arg[i];
                     Object[] targets = si.targets;
                     for(j=0;j<targets.length;j++) targets[j] = resolveTarget(targets[j]);
                     si.defaultTarget = resolveTarget(si.defaultTarget);
                     p += 1 + 3 + si.length(); // opcode itself, padding, data
-                    if(op == LOOKUPSWITCH) { // verify sanity of lookupswitch vals
-                        int[] vals = ((LSI)si).vals;
+                    if (op == LOOKUPSWITCH) { // verify sanity of lookupswitch vals
+                        int[] vals = ((Switch.Lookup)si).vals;
                         for(j=1;j<vals.length;j++)
-                            if(vals[j] <= vals[j-1])
+                            if (vals[j] <= vals[j-1])
                                 throw new IllegalStateException("out of order/duplicate lookupswitch values");
                     }
                     continue;
@@ -728,7 +651,7 @@ public class MethodGen implements CGConst {
                 case FSTORE: case DLOAD: case DSTORE: case ALOAD: case ASTORE:
                 case RET: {
                     int arg = ((Integer)this.arg[i]).intValue();
-                    if(arg > 255) {
+                    if (arg > 255) {
                         this.op[i] = WIDE;
                         this.arg[i] = new Wide(op, arg);
                         p += 4;
@@ -738,7 +661,7 @@ public class MethodGen implements CGConst {
                 }
                 case IINC: {
                     Pair pair = (Pair) this.arg[i];
-                    if(pair.i1 > 255 || pair.i2 < -128 || pair.i2 > 127) {
+                    if (pair.i1 > 255 || pair.i2 < -128 || pair.i2 > 127) {
                         this.op[i] = WIDE;
                         this.arg[i] = new Wide(IINC, pair.i1, pair.i2);
                         p += 6;
@@ -748,7 +671,7 @@ public class MethodGen implements CGConst {
                 }
                 case LDC:
                     j = cp.getIndex(cparg[i]);
-                    if(j >= 256) {
+                    if (j >= 256) {
                         this.op[i] = op = LDC_W;
                         p += 3;
                         continue;
@@ -756,7 +679,7 @@ public class MethodGen implements CGConst {
                     break;
                 default:
             }
-            if((j = (opdata&OP_ARG_LENGTH_MASK)) == 7) throw new Error("shouldn't be here " + Integer.toString(op&0xff,16));
+            if ((j = (opdata&OP_ARG_LENGTH_MASK)) == 7) throw new Error("shouldn't be here " + Integer.toString(op&0xff,16));
             p += 1 + j;
         }
         
@@ -767,7 +690,7 @@ public class MethodGen implements CGConst {
                 case JSR: {
                     int arg = ((Integer)this.arg[i]).intValue();
                     int diff = maxpc[arg] - maxpc[i];
-                    if(diff < -32768 || diff > 32767)
+                    if (diff < -32768 || diff > 32767)
                         op[i] = op[i] == GOTO ? GOTO_W : JSR_W;
                     break;
                 }
@@ -780,15 +703,15 @@ public class MethodGen implements CGConst {
             pc[i] = p;
             switch(op) {
                 case NOP:
-                    if(EMIT_NOPS) p++;
+                    if (EMIT_NOPS) p++;
                     break;
                 case TABLESWITCH:
                 case LOOKUPSWITCH: {
-                    SI si = (SI) arg[i];
+                    Switch si = (Switch) arg[i];
                     p++; // opcode itself
                     p = (p + 3) & ~3; // padding
                     p += 4; // default
-                    if(op == TABLESWITCH) p += 4 + 4 + si.size() * 4; // lo, hi, targets
+                    if (op == TABLESWITCH) p += 4 + 4 + si.size() * 4; // lo, hi, targets
                     else p += 4 + si.size() * 4 * 2; // count, key, val * targets
                     break;
                 }
@@ -797,12 +720,14 @@ public class MethodGen implements CGConst {
                     break;                
                 default: {
                     int l = OP_DATA[op&0xff] & OP_ARG_LENGTH_MASK;
-                    if(l == 7) throw new Error("shouldn't be here");
+                    if (l == 7) throw new Error("shouldn't be here");
                     p += 1 + l;                    
                 }
             }
         }
         int codeSize = p;
+        
+        if (codeSize >= 65536) throw new ClassFile.Exn("method too large in size");
         
         o.writeShort(maxStack);
         o.writeShort(maxLocals);
@@ -812,11 +737,11 @@ public class MethodGen implements CGConst {
         for(i=0;i<size;i++) {
             byte op = this.op[i];
             int opdata = OP_DATA[op&0xff];
-            if(op == NOP && !EMIT_NOPS) continue;
+            if (op == NOP && !EMIT_NOPS) continue;
             o.writeByte(op);
             int argLength = opdata & OP_ARG_LENGTH_MASK;
             
-            if(argLength == 0) continue; // skip if no args
+            if (argLength == 0) continue; // skip if no args
             
             // Write args
             Object arg = this.arg[i];  
@@ -824,25 +749,26 @@ public class MethodGen implements CGConst {
             switch(op) {
                 case IINC: {
                     Pair pair = (Pair) arg;
-                    if(pair.i1 > 255 || pair.i2 < -128 || pair.i2 > 127) throw new ClassFile.Exn("overflow of iinc arg"); 
+                    if (pair.i1 > 255 || pair.i2 < -128 || pair.i2 > 127) throw new ClassFile.Exn("overflow of iinc arg"); 
                     o.writeByte(pair.i1);
                     o.writeByte(pair.i2);
+                    break;
                 }
                 case TABLESWITCH:
                 case LOOKUPSWITCH: {
-                    SI si = (SI) arg;
+                    Switch si = (Switch) arg;
                     int mypc = pc[i];
                     for(p = pc[i]+1;(p&3)!=0;p++) o.writeByte(0);
                     o.writeInt(pc[si.getDefaultTarget()] - mypc);
-                    if(op == LOOKUPSWITCH) {
-                        int[] vals = ((LSI)si).vals;
+                    if (op == LOOKUPSWITCH) {
+                        int[] vals = ((Switch.Lookup)si).vals;
                         o.writeInt(si.size());
                         for(int j=0;j<si.size();j++) {
                             o.writeInt(vals[j]);
                             o.writeInt(pc[si.getTarget(j)] - mypc);
                         }
                     } else {
-                        TSI tsi = (TSI) si;
+                        Switch.Table tsi = (Switch.Table) si;
                         o.writeInt(tsi.lo);
                         o.writeInt(tsi.hi);
                         for(int j=0;j<tsi.size();j++) o.writeInt(pc[tsi.getTarget(j)] - mypc);
@@ -853,13 +779,13 @@ public class MethodGen implements CGConst {
                     Wide wide = (Wide) arg;
                     o.writeByte(wide.op);
                     o.writeShort(wide.varNum);
-                    if(wide.op == IINC) o.writeShort(wide.n);
+                    if (wide.op == IINC) o.writeShort(wide.n);
                     break;
                 }
                 case MULTIANEWARRAY: {
                     o.writeShort(cp.getIndex(cparg[i]));
                     int v = ((MultiANewArray) arg).dims;
-                    if(v >= 256) throw new ClassFile.Exn("overflow of dimensions in multianewarray");
+                    if (v >= 256) throw new ClassFile.Exn("overflow of dimensions in multianewarray");
                     o.writeByte(v);
                     break;
                 }
@@ -869,24 +795,30 @@ public class MethodGen implements CGConst {
                     o.writeByte(0);
                     break;
                 default:
-                    if((opdata & OP_BRANCH_FLAG) != 0) {
+                    if ((opdata & OP_BRANCH_FLAG) != 0) {
                         int v = pc[((Integer)arg).intValue()] - pc[i];
-                        if(v < -32768 || v > 32767) throw new ClassFile.Exn("overflow of s2 offset");
-                        o.writeShort(v);
-                    } else if((opdata & OP_CPENT_FLAG) != 0) {
+                        if (argLength == 2) {
+                            if (v < -32768 || v > 32767) throw new ClassFile.Exn("overflow of s2 offset");
+                            o.writeShort(v);
+                        } else if (argLength == 4) {
+                            o.writeInt(v);
+                        } else {
+                            throw new Error("should never happen");
+                        }
+                    } else if ((opdata & OP_CPENT_FLAG) != 0) {
                         int v = cp.getIndex(cparg[i]);
-                        if(argLength == 1) o.writeByte(v);
-                        else if(argLength == 2) o.writeShort(v);
+                        if (argLength == 1) o.writeByte(v);
+                        else if (argLength == 2) o.writeShort(v);
                         else throw new Error("should never happen");
-                    } else if(argLength == 7) {
+                    } else if (argLength == 7) {
                         throw new Error("should never happen - variable length instruction not explicitly handled");
                     } else {
                         int iarg  = ((Integer)arg).intValue();
-                        if(argLength == 1) {
-                            if((opdata & OP_UNSIGNED_FLAG) != 0 ? iarg >= 256 : (iarg < -128 || iarg >= 128)) throw new ClassFile.Exn("overflow of s/u1 option");
+                        if (argLength == 1) {
+                            if ((opdata & OP_UNSIGNED_FLAG) != 0 ? iarg >= 256 : (iarg < -128 || iarg >= 128)) throw new ClassFile.Exn("overflow of s/u1 option");
                             o.writeByte(iarg);
-                        } else if(argLength == 2) {
-                            if((opdata & OP_UNSIGNED_FLAG) != 0 ? iarg >= 65536 : (iarg < -32768 || iarg >= 32768)) throw new ClassFile.Exn("overflow of s/u2 option");
+                        } else if (argLength == 2) {
+                            if ((opdata & OP_UNSIGNED_FLAG) != 0 ? iarg >= 65536 : (iarg < -32768 || iarg >= 32768)) throw new ClassFile.Exn("overflow of s/u2 option");
                             o.writeShort(iarg);
                         } else {
                             throw new Error("should never happen");
@@ -896,7 +828,7 @@ public class MethodGen implements CGConst {
             }
         }
 
-        //if(baos.size() - 8 != codeSize) throw new Error("we didn't output what we were supposed to");
+        //if (baos.size() - 8 != codeSize) throw new Error("we didn't output what we were supposed to");
         
         o.writeShort(exnTable.size());
         for(i=0;i<exnTable.size();i++)
@@ -910,7 +842,7 @@ public class MethodGen implements CGConst {
     }
         
     void generateExceptions(ConstantPool cp) throws IOException {
-        if(thrownExceptions.size() > 0) {
+        if (thrownExceptions.size() > 0) {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream o = new DataOutputStream(baos);
             o.writeShort(thrownExceptions.size());
@@ -922,7 +854,7 @@ public class MethodGen implements CGConst {
     }
     
     void dump(DataOutput o, ConstantPool cp) throws IOException {
-        if((flags & (NATIVE|ABSTRACT))==0) generateCode(cp);
+        if ((flags & (NATIVE|ABSTRACT))==0) generateCode(cp);
         generateExceptions(cp);
         
         o.writeShort(flags);
@@ -999,4 +931,85 @@ public class MethodGen implements CGConst {
         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 
         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01
     };
+
+    // Debugging //////////////////////////////////////////////////////////////////////////////
+
+    public void debugToString(StringBuffer sb, String constructorName) {
+        // This is intentionally a local variable so it can be removed by gcclass
+        final String[] OP_NAMES = new String[]{
+            "nop", "aconst_null", "iconst_m1", "iconst_0", "iconst_1", "iconst_2", 
+            "iconst_3", "iconst_4", "iconst_5", "lconst_0", "lconst_1", "fconst_0", 
+            "fconst_1", "fconst_2", "dconst_0", "dconst_1", "bipush", "sipush", 
+            "ldc", "ldc_w", "ldc2_w", "iload", "lload", "fload", 
+            "dload", "aload", "iload_0", "iload_1", "iload_2", "iload_3", 
+            "lload_0", "lload_1", "lload_2", "lload_3", "fload_0", "fload_1", 
+            "fload_2", "fload_3", "dload_0", "dload_1", "dload_2", "dload_3", 
+            "aload_0", "aload_1", "aload_2", "aload_3", "iaload", "laload", 
+            "faload", "daload", "aaload", "baload", "caload", "saload", 
+            "istore", "lstore", "fstore", "dstore", "astore", "istore_0", 
+            "istore_1", "istore_2", "istore_3", "lstore_0", "lstore_1", "lstore_2", 
+            "lstore_3", "fstore_0", "fstore_1", "fstore_2", "fstore_3", "dstore_0", 
+            "dstore_1", "dstore_2", "dstore_3", "astore_0", "astore_1", "astore_2", 
+            "astore_3", "iastore", "lastore", "fastore", "dastore", "aastore", 
+            "bastore", "castore", "sastore", "pop", "pop2", "dup", 
+            "dup_x1", "dup_x2", "dup2", "dup2_x1", "dup2_x2", "swap", 
+            "iadd", "ladd", "fadd", "dadd", "isub", "lsub", 
+            "fsub", "dsub", "imul", "lmul", "fmul", "dmul", 
+            "idiv", "ldiv", "fdiv", "ddiv", "irem", "lrem", 
+            "frem", "drem", "ineg", "lneg", "fneg", "dneg", 
+            "ishl", "lshl", "ishr", "lshr", "iushr", "lushr", 
+            "iand", "land", "ior", "lor", "ixor", "lxor", 
+            "iinc", "i2l", "i2f", "i2d", "l2i", "l2f", 
+            "l2d", "f2i", "f2l", "f2d", "d2i", "d2l", 
+            "d2f", "i2b", "i2c", "i2s", "lcmp", "fcmpl", 
+            "fcmpg", "dcmpl", "dcmpg", "ifeq", "ifne", "iflt", 
+            "ifge", "ifgt", "ifle", "if_icmpeq", "if_icmpne", "if_icmplt", 
+            "if_icmpge", "if_icmpgt", "if_icmple", "if_acmpeq", "if_acmpne", "goto", 
+            "jsr", "ret", "tableswitch", "lookupswitch", "ireturn", "lreturn", 
+            "freturn", "dreturn", "areturn", "return", "getstatic", "putstatic", 
+            "getfield", "putfield", "invokevirtual", "invokespecial", "invokestatic", "invokeinterface", 
+            "", "new", "newarray", "anewarray", "arraylength", "athrow", 
+            "checkcast", "instanceof", "monitorenter", "monitorexit", "wide", "multianewarray", 
+            "ifnull", "ifnonnull", "goto_w", "jsr_w", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", "", "", "", 
+            "", "", "", ""
+        };
+        
+        sb.append("  ").append(ClassFile.flagsToString(flags,false));
+        sb.append(method.debugToString());
+        if (thrownExceptions.size() > 0) {
+            sb.append("throws");
+            for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
+                sb.append(" ").append(((Type.Class)e.nextElement()).debugToString()).append(",");
+            sb.setLength(sb.length()-1);
+            sb.append(" ");
+        }
+        if ((flags & (NATIVE|ABSTRACT))==0) {
+            sb.append("{\n");
+            for(int i=0;i<size();i++) {
+                sb.append("    ");
+                for(int j=i==0?1:i;j<10000;j*=10) sb.append(" ");
+                sb.append(i).append(": ");
+                sb.append(OP_NAMES[op[i]&0xff]);
+                String s = null;
+                if (arg[i] instanceof Type) s = ((Type)arg[i]).debugToString();
+                else if (arg[i] instanceof Type.Class.Member) s = ((Type.Class.Member)arg[i]).toString();
+                else if (arg[i] instanceof String) s = "\"" + s + "\"";
+                else if (arg[i] != null) s = arg[i].toString();
+                if (s != null) sb.append(" ").append(s);
+                sb.append("\n");
+            }
+            sb.append("  }\n");
+        } else {
+            sb.append(";");
+        }
+    }
+
 }
