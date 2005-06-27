@@ -319,6 +319,7 @@ public class MethodGen implements CGConst {
         size++;
         return s;
     }
+
     /** Set the bytecode at position <i>pos</i> to <i>op</i> */
     public final void set(int pos, byte op) { this.op[pos] = op; }
         
@@ -326,12 +327,16 @@ public class MethodGen implements CGConst {
         @return The position of the new bytecode
         */
     public final int add(byte op, Object arg) { if (capacity == size) grow(); set(size, op, arg); return size++; }
+
     /** Adds a bytecode with a boolean argument - equivalent to add(op, arg?1:0);
         @return The position of the new bytecode
         @see #add(byte, int)
     */
     public final int add(byte op, boolean arg) { if (capacity == size) grow(); set(size, op, arg); return size++; }
-    /** Adds a bytecode with an integer argument. This is equivalent to add(op, new Integer(arg)), but optimized to prevent the allocation when possible
+
+    /** Adds a bytecode with an integer argument. This is equivalent
+     * to add(op, new Integer(arg)), but optimized to prevent the
+     * allocation when possible
         @return The position of the new bytecode
         @see #add(byte, Object)
     */
@@ -350,13 +355,15 @@ public class MethodGen implements CGConst {
     */    
     public final Object getArg(int pos) { return arg[pos]; }
     
-    /** Sets the argument for <i>pos</i> to <i>arg</i>. This is equivalent to set(pos, op, new Integer(arg)), but optimized to prevent the allocation when possible.
+    /** Sets the argument for <i>pos</i> to <i>arg</i>. This is
+     * equivalent to set(pos, op, new Integer(arg)), but optimized to
+     * prevent the allocation when possible.
         @exception ArrayIndexOutOfBoundException if pos < 0 || pos >= size()
         @see #setArg(int, Object) */
     public final void setArg(int pos, int arg) { set(pos, op[pos], N(arg)); }
+
     /** Sets the argument for <i>pos</i> to <i>arg</i>.
-        @exception ArrayIndexOutOfBoundException if pos < 0 || pos >= size()
-    */
+        @exception ArrayIndexOutOfBoundException if pos < 0 || pos >= size() */
     public final void setArg(int pos, Object arg) { set(pos, op[pos], arg); }
     
     /** Sets the bytecode and argument  at <i>pos</i> to <i>op</i> and <i>arg</i> respectivly. 
@@ -450,6 +457,20 @@ public class MethodGen implements CGConst {
         this.arg[pos] = arg;
     }
     
+    /** Sets the maximum number of locals in the function to
+        <i>maxLocals</i>. NOTE: This defaults to 0 and is
+        automatically increased as necessary when *LOAD/*STORE
+        bytecodes are added. You do not need to call this function in
+        most cases */
+    public void setMaxLocals(int maxLocals) { this.maxLocals = maxLocals; }
+
+    /** Sets the maxinum size of th stack for this function to
+     * <i>maxStack</i>. This defaults to 16< */
+    public void setMaxStack(int maxStack) { this.maxStack = maxStack; }
+    
+
+    // Bytecode-Specific inner classes ////////////////////////////////////////////////////////////////////////////////
+
     public static abstract class Switch {
         public final Object[] targets;
         public Object defaultTarget;
@@ -512,12 +533,47 @@ public class MethodGen implements CGConst {
         Wide(byte op, int varNum) { this(op, varNum, 0); }
         Wide(byte op, int varNum, int n) { this.op = op; this.varNum = varNum; this.n = n; }
     }
-        
-    /** Sets the maximum number of locals in the function to <i>maxLocals</i>. NOTE: This defaults to 0 and is automatically increased as
-        necessary when *LOAD/*STORE bytecodes are added. You do not need to call this function in most cases */
-    public void setMaxLocals(int maxLocals) { this.maxLocals = maxLocals; }
-    /** Sets the maxinum size of th stack for this function  to <i>maxStack</i>. This defaults to 16< */
-    public void setMaxStack(int maxStack) { this.maxStack = maxStack; }
+
+
+    // Emitting Bits //////////////////////////////////////////////////////////////////////////////
+   
+    /** Negates the IF* instruction, <i>op</i>  (IF_ICMPGT -> IF_ICMPLE, IFNE -> IFEQ,  etc)
+        @exception IllegalArgumentException if <i>op</i> isn't an IF* instruction */
+    public static byte negate(byte op) {
+        switch(op) {
+            case IFEQ: return IFNE;
+            case IFNE: return IFEQ;
+            case IFLT: return IFGE;
+            case IFGE: return IFLT;
+            case IFGT: return IFLE;
+            case IFLE: return IFGT;
+            case IF_ICMPEQ: return IF_ICMPNE;
+            case IF_ICMPNE: return IF_ICMPEQ;
+            case IF_ICMPLT: return IF_ICMPGE;
+            case IF_ICMPGE: return IF_ICMPLT;
+            case IF_ICMPGT: return IF_ICMPLE;
+            case IF_ICMPLE: return IF_ICMPGT;
+            case IF_ACMPEQ: return IF_ACMPNE;
+            case IF_ACMPNE: return IF_ACMPEQ;
+            
+            default:
+                throw new IllegalArgumentException("Can't negate " + Integer.toHexString(op));
+        }
+    }
+
+    private Object resolveTarget(Object arg) {
+        int target;
+        if (arg instanceof PhantomTarget) {
+            target = ((PhantomTarget)arg).getTarget();
+            if (target == -1) throw new IllegalStateException("unresolved phantom target");
+            arg = N(target);
+        } else {
+            target = ((Integer)arg).intValue();
+        }
+        if (target < 0 || target >= size)
+            throw new IllegalStateException("invalid target address " + target + "/" + size);
+        return arg;
+    }
     
     /** Computes the final bytecode for this method. 
         @exception IllegalStateException if the data for a method is in an inconsistent state (required arguments missing, etc)
@@ -569,21 +625,7 @@ public class MethodGen implements CGConst {
             }
         }
     }
-    
-    private Object resolveTarget(Object arg) {
-        int target;
-        if (arg instanceof PhantomTarget) {
-            target = ((PhantomTarget)arg).getTarget();
-            if (target == -1) throw new IllegalStateException("unresolved phantom target");
-            arg = N(target);
-        } else {
-            target = ((Integer)arg).intValue();
-        }
-        if (target < 0 || target >= size)
-            throw new IllegalStateException("invalid target address " + target + "/" + size);
-        return arg;
-    }
-    
+
     private void generateCode(ConstantPool cp) {
         try {
             _generateCode(cp);
@@ -815,10 +857,12 @@ public class MethodGen implements CGConst {
                     } else {
                         int iarg  = ((Integer)arg).intValue();
                         if (argLength == 1) {
-                            if ((opdata & OP_UNSIGNED_FLAG) != 0 ? iarg >= 256 : (iarg < -128 || iarg >= 128)) throw new ClassFile.Exn("overflow of s/u1 option");
+                            if ((opdata & OP_UNSIGNED_FLAG) != 0 ? iarg >= 256 : (iarg < -128 || iarg >= 128))
+                                throw new ClassFile.Exn("overflow of s/u1 option");
                             o.writeByte(iarg);
                         } else if (argLength == 2) {
-                            if ((opdata & OP_UNSIGNED_FLAG) != 0 ? iarg >= 65536 : (iarg < -32768 || iarg >= 32768)) throw new ClassFile.Exn("overflow of s/u2 option");
+                            if ((opdata & OP_UNSIGNED_FLAG) != 0 ? iarg >= 65536 : (iarg < -32768 || iarg >= 32768))
+                                throw new ClassFile.Exn("overflow of s/u2 option");
                             o.writeShort(iarg);
                         } else {
                             throw new Error("should never happen");
@@ -863,32 +907,10 @@ public class MethodGen implements CGConst {
         attrs.dump(o,cp);
     }
     
-    /** Negates the IF* instruction, <i>op</i>  (IF_ICMPGT -> IF_ICMPLE, IFNE -> IFEQ,  etc)
-        @exception IllegalArgumentException if <i>op</i> isn't an IF* instruction */
-    public static byte negate(byte op) {
-        switch(op) {
-            case IFEQ: return IFNE;
-            case IFNE: return IFEQ;
-            case IFLT: return IFGE;
-            case IFGE: return IFLT;
-            case IFGT: return IFLE;
-            case IFLE: return IFGT;
-            case IF_ICMPEQ: return IF_ICMPNE;
-            case IF_ICMPNE: return IF_ICMPEQ;
-            case IF_ICMPLT: return IF_ICMPGE;
-            case IF_ICMPGE: return IF_ICMPLT;
-            case IF_ICMPGT: return IF_ICMPLE;
-            case IF_ICMPLE: return IF_ICMPGT;
-            case IF_ACMPEQ: return IF_ACMPNE;
-            case IF_ACMPNE: return IF_ACMPEQ;
-            
-            default:
-                throw new IllegalArgumentException("Can't negate " + Integer.toHexString(op));
-        }
-    }
-    
-    /** Class that represents a target that isn't currently know. The target MUST be set with setTarget() before the classfile is written. 
-        This class is more or less a mutable integer */
+   
+    /** Class that represents a target that isn't currently know. The
+        target MUST be set with setTarget() before the classfile is
+        written.  This class is more or less a mutable integer */
     public static class PhantomTarget {
         private int target = -1;
         public void setTarget(int target) { this.target = target; }
