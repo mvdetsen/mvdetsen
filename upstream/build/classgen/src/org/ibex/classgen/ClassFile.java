@@ -8,57 +8,57 @@ public class ClassFile implements CGConst {
     private final Type.Class thisType;
     private final Type.Class superType;
     private final Type.Class[] interfaces;
-    private short minor;
-    private short major;
+    private final short minor;
+    private final short major;
     final int flags;
     
     private final Vector fields = new Vector();
     private final Vector methods = new Vector();
     
-    final ConstantPool cp;
     private final AttrGen attributes;
 
-    public static String flagsToString(int flags) {
-        String ret = "";
-        if ((flags & ACC_PUBLIC) != 0)       ret += "public ";
-        if ((flags & ACC_PRIVATE) != 0)      ret += "private ";
-        if ((flags & ACC_PROTECTED) != 0)    ret += "protected ";
-        if ((flags & ACC_STATIC) != 0)       ret += "static ";
-        if ((flags & ACC_FINAL) != 0)        ret += "final ";
-        if ((flags & ACC_ABSTRACT) != 0)     ret += "abstract ";
-        if ((flags & ACC_SYNCHRONIZED) != 0) ret += "synchronized ";
-        if ((flags & ACC_NATIVE) != 0)       ret += "native ";
-        if ((flags & ACC_STRICT) != 0)       ret += "strictfp ";
-        if ((flags & ACC_VOLATILE) != 0)     ret += "volatile ";
-        if ((flags & ACC_TRANSIENT) != 0)    ret += "transient ";
-        return ret;
+    static String flagsToString(int flags, boolean isClass) {
+        StringBuffer sb = new StringBuffer(32);
+        if ((flags & ACC_PUBLIC) != 0)       sb.append("public ");
+        if ((flags & ACC_PRIVATE) != 0)      sb.append("private ");
+        if ((flags & ACC_PROTECTED) != 0)    sb.append("protected ");
+        if ((flags & ACC_STATIC) != 0)       sb.append("static ");
+        if ((flags & ACC_FINAL) != 0)        sb.append("final ");
+        if ((flags & ACC_ABSTRACT) != 0)     sb.append("abstract ");
+        if (!isClass && (flags & ACC_SYNCHRONIZED) != 0) sb.append("synchronized ");
+        if (!isClass && (flags & ACC_NATIVE) != 0)       sb.append("native ");
+        if (!isClass && (flags & ACC_STRICT) != 0)       sb.append("strictfp ");
+        if (!isClass && (flags & ACC_VOLATILE) != 0)     sb.append("volatile ");
+        if (!isClass && (flags & ACC_TRANSIENT) != 0)    sb.append("transient ");
+        return sb.toString();
     }
 
     public Type.Class getType() { return thisType; }
-    public String toString() { StringBuffer sb = new StringBuffer(); toString(sb); return sb.toString(); }
-    public void   toString(StringBuffer sb) {
-        sb.append(flagsToString(flags));
+    
+    String debugToString() { return debugToString(new StringBuffer(4096)).toString(); }
+    StringBuffer debugToString(StringBuffer sb) {
+        sb.append(flagsToString(flags,true));
         sb.append((flags & ACC_INTERFACE) != 0 ? "interface " : "class ");
-        sb.append(thisType);
-        if (superType != null) sb.append(" extends " + superType);
+        sb.append(thisType.debugToString());
+        if (superType != null) sb.append(" extends " + superType.debugToString());
         if (interfaces != null && interfaces.length > 0) sb.append(" implements");
-        for(int i=0; i<interfaces.length; i++) sb.append((i==0?" ":", ")+interfaces[i]);
+        for(int i=0; i<interfaces.length; i++) sb.append((i==0?" ":", ")+interfaces[i].debugToString());
         sb.append(" {");
-        sb.append(" // [jcf v"+major+"."+minor+"]");
-        String sourceFile = (String)attributes.get("SourceFile");
-        if (sourceFile != null) sb.append(" from " + sourceFile);
+        sb.append(" // v"+major+"."+minor);
+        ConstantPool.Utf8Key sourceFile = (ConstantPool.Utf8Key) attributes.get("SourceFile");
+        if (sourceFile != null) sb.append(" from " + sourceFile.s);
         sb.append("\n");
         for(int i=0; i<fields.size(); i++) {
             sb.append("  ");
-            ((FieldGen)fields.elementAt(i)).toString(sb);
+            ((FieldGen)fields.elementAt(i)).debugToString(sb);
             sb.append("\n");
         }
         for(int i=0; i<methods.size(); i++) {
-            sb.append("  ");
-            ((MethodGen)methods.elementAt(i)).toString(sb, thisType.getShortName());
+            ((MethodGen)methods.elementAt(i)).debugToString(sb,thisType.getShortName());
             sb.append("\n");
         }
         sb.append("}");
+        return sb;
     }
 
     public ClassFile(Type.Class thisType, Type.Class superType, int flags) { this(thisType, superType, flags, null); }
@@ -70,10 +70,8 @@ public class ClassFile implements CGConst {
         this.interfaces = interfaces;
         this.flags = flags;
         this.minor = 3;
-        this.major = 45;
-        
-        cp = new ConstantPool();
-        attributes = new AttrGen(cp);
+        this.major = 45;        
+        this.attributes = new AttrGen();
     }
     
     /** Adds a new method to this class 
@@ -88,7 +86,7 @@ public class ClassFile implements CGConst {
         @see CGConst
     */
     public final MethodGen addMethod(String name, Type ret, Type[] args, int flags) {
-        MethodGen mg = new MethodGen(this, name, ret, args, flags);
+        MethodGen mg = new MethodGen(this, name, ret, args, flags, (this.flags & ACC_INTERFACE) != 0);
         methods.addElement(mg);
         return mg;
     }
@@ -112,7 +110,7 @@ public class ClassFile implements CGConst {
     /** Sets the source value of the SourceFile attribute of this class 
         @param sourceFile The string to be uses as the SourceFile of this class
     */
-    public void setSourceFile(String sourceFile) { attributes.add("SourceFile", sourceFile); }
+    public void setSourceFile(String sourceFile) { attributes.put("SourceFile", new ConstantPool.Utf8Key(sourceFile)); }
     
     /** Writes the classfile data to the file specifed
         @see ClassFile#dump(OutputStream)
@@ -151,16 +149,15 @@ public class ClassFile implements CGConst {
     }
     
     private void _dump(DataOutput o) throws IOException {
-        cp.optimize();
-        cp.stable();
-        
+        ConstantPool cp = new ConstantPool();
         cp.add(thisType);
         cp.add(superType);
         if(interfaces != null) for(int i=0;i<interfaces.length;i++) cp.add(interfaces[i]);
-                
-        for(int i=0;i<methods.size();i++) ((MethodGen)methods.elementAt(i)).finish();
-        for(int i=0;i<fields.size();i++) ((FieldGen)fields.elementAt(i)).finish();
+        for(int i=0;i<methods.size();i++) ((MethodGen)methods.elementAt(i)).finish(cp);
+        for(int i=0;i<fields.size();i++) ((FieldGen)fields.elementAt(i)).finish(cp);
+        attributes.finish(cp);
         
+        cp.optimize();
         cp.seal();
         
         o.writeInt(0xcafebabe); // magic
@@ -177,48 +174,59 @@ public class ClassFile implements CGConst {
         if(interfaces != null) for(int i=0;i<interfaces.length;i++) o.writeShort(cp.getIndex(interfaces[i])); // interfaces
         
         o.writeShort(fields.size()); // fields_count
-        for(int i=0;i<fields.size();i++) ((FieldGen)fields.elementAt(i)).dump(o); // fields
+        for(int i=0;i<fields.size();i++) ((FieldGen)fields.elementAt(i)).dump(o,cp); // fields
 
         o.writeShort(methods.size()); // methods_count
-        for(int i=0;i<methods.size();i++) ((MethodGen)methods.elementAt(i)).dump(o); // methods
+        for(int i=0;i<methods.size();i++) ((MethodGen)methods.elementAt(i)).dump(o,cp); // methods
         
-        o.writeShort(attributes.size()); // attributes_count
-        attributes.dump(o); // attributes        
+        attributes.dump(o,cp); // attributes        
     }
     
-    public ClassFile read(File f) throws ClassReadExn, IOException {
+    public static ClassFile read(String s) throws IOException { return read(new File(s)); }
+    public static ClassFile read(File f) throws ClassReadExn, IOException {
         InputStream is = new FileInputStream(f);
         ClassFile ret = read(is);
         is.close();
         return ret;
     }
     
-    public ClassFile read(InputStream is) throws ClassReadExn, IOException {
-        return new ClassFile(new DataInputStream(new BufferedInputStream(is)));
+    public static ClassFile read(InputStream is) throws ClassReadExn, IOException {
+        try {
+            return new ClassFile(new DataInputStream(new BufferedInputStream(is)));
+        } catch(RuntimeException e) {
+            e.printStackTrace();
+            throw new ClassReadExn("invalid constant pool entry");
+        }
     }
 
-    ClassFile(DataInput i) throws ClassReadExn, IOException {
+    ClassFile(DataInput i) throws IOException {
         int magic = i.readInt();
         if (magic != 0xcafebabe) throw new ClassReadExn("invalid magic: " + Long.toString(0xffffffffL & magic, 16));
         minor = i.readShort();
-        //if (minor != 3) throw new ClassReadExn("invalid minor version: " + minor);
         major = i.readShort();
-        //if (major != 45 && major != 46) throw new ClassReadExn("invalid major version");
-        cp = new ConstantPool(i);
+        ConstantPool cp = new ConstantPool(i);
         flags = i.readShort();
-        thisType = (Type.Class)cp.getType(i.readShort());
-        superType = (Type.Class)cp.getType(i.readShort());
+        if((flags & ~(ACC_PUBLIC|ACC_FINAL|ACC_SUPER|ACC_INTERFACE|ACC_ABSTRACT)) != 0)
+            throw new ClassReadExn("invalid flags: " + Integer.toString(flags,16));
+        thisType = (Type.Class) cp.getKeyByIndex(i.readShort());
+        superType = (Type.Class) cp.getKeyByIndex(i.readShort());
         interfaces = new Type.Class[i.readShort()];
-        for(int j=0; j<interfaces.length; j++) interfaces[j] = (Type.Class)cp.getType(i.readShort());
+        for(int j=0; j<interfaces.length; j++) interfaces[j] = (Type.Class) cp.getKeyByIndex(i.readShort());
         int numFields = i.readShort();
-        for(int j=0; j<numFields; j++) fields.add(new FieldGen(cp, i));
+        for(int j=0; j<numFields; j++) fields.addElement(new FieldGen(i, cp));
         int numMethods = i.readShort();
-        for(int j=0; j<numMethods; j++) methods.add(new MethodGen(cp, i, this));
-        attributes = new AttrGen(cp, i);
+        for(int j=0; j<numMethods; j++) methods.addElement(new MethodGen(this, i, cp, (this.flags & ACC_INTERFACE) != 0));
+        attributes = new AttrGen(i, cp);
+        
+        // FEATURE: Support these
+        // NOTE: Until we can support them properly we HAVE to delete them,
+        //       they'll be incorrect after we rewrite the constant pool, etc
+        attributes.remove("InnerClasses");
     }
     
     /** Thrown when class generation fails for a reason not under the control of the user
         (IllegalStateExceptions are thrown in those cases */
+    // FEATURE: This should probably be a checked exception
     public static class Exn extends RuntimeException {
         public Exn(String s) { super(s); }
     }
@@ -228,24 +236,16 @@ public class ClassFile implements CGConst {
     }
     
     static class AttrGen {
-        private final ConstantPool cp;
         private final Hashtable ht = new Hashtable();
         
-        public AttrGen(ConstantPool cp) { this.cp = cp; }
-        public AttrGen(ConstantPool cp, DataInput in) throws IOException {
-            this(cp);
+        AttrGen() { }
+        AttrGen(DataInput in, ConstantPool cp) throws IOException {
             int size = in.readShort();
             for(int i=0; i<size; i++) {
-                String name = null;
-                int idx = in.readShort();
-                ConstantPool.Ent e = cp.getByIndex(idx);
-                Object key = e.key();
-                if (key instanceof String) name = (String)key;
-                else name = ((Type)key).getDescriptor();
-
+                String name = cp.getUtf8KeyByIndex(in.readUnsignedShort());
                 int length = in.readInt();
-                if (length==2) {   // FIXME might be wrong assumption
-                    ht.put(name, cp.getByIndex(in.readShort()));
+                if ((name.equals("SourceFile")||name.equals("ConstantValue")) && length == 2) {
+                    ht.put(name, cp.getKeyByIndex(in.readUnsignedShort()));
                 } else {
                     byte[] buf = new byte[length];
                     in.readFully(buf);
@@ -254,22 +254,23 @@ public class ClassFile implements CGConst {
             }
         }
 
-        public Object get(String s) {
-            Object ret = ht.get(s);
-            if (ret instanceof ConstantPool.Utf8Ent) return ((ConstantPool.Utf8Ent)ret).s;
-            return ret;
-        }
-        
-        public void add(String s, Object data) {
-            cp.addUtf8(s);
-            ht.put(s, data);
-        }
-        
+        public Object get(String s) { return ht.get(s); }
+        public void put(String s, Object data) { ht.put(s, data); }
         public boolean contains(String s) { return ht.get(s) != null; }
-        
+        public void remove(String s) { ht.remove(s); }
         public int size() { return ht.size(); }
         
-        public void dump(DataOutput o) throws IOException {
+        void finish(ConstantPool cp) {
+            for(Enumeration e = ht.keys(); e.hasMoreElements();) {
+                String name = (String) e.nextElement();
+                Object val = ht.get(name);
+                cp.addUtf8(name);
+                if(!(val instanceof byte[])) cp.add(val);
+            }
+        }
+        
+        void dump(DataOutput o, ConstantPool cp) throws IOException {
+            o.writeShort(size());
             for(Enumeration e = ht.keys(); e.hasMoreElements();) {
                 String name = (String) e.nextElement();
                 Object val = ht.get(name);
@@ -278,23 +279,29 @@ public class ClassFile implements CGConst {
                     byte[] buf = (byte[]) val;
                     o.writeInt(buf.length);
                     o.write(buf);
-                } else if (val instanceof ConstantPool.Ent) {
-                    o.writeInt(2);
-                    o.writeShort(cp.getIndex((ConstantPool.Ent)val));
                 } else {
-                    throw new Error("should never happen");
+                    o.writeInt(2);
+                    o.writeShort(cp.getIndex(val));
                 }
             }
         }
     }
     
     public static void main(String[] args) throws Exception {
-        if (args.length==1) {
+        if(args.length >= 2 && args[0].equals("copyto")) {
+            File dest = new File(args[1]);
+            dest.mkdirs();
+            for(int i=2;i<args.length;i++) {
+                System.err.println("Copying " + args[i]);
+                read(args[i]).dump(dest);
+            }
+        }
+        else if (args.length==1) {
             if (args[0].endsWith(".class")) {
-                System.out.println(new ClassFile(new DataInputStream(new FileInputStream(args[0]))));
+                System.out.println(new ClassFile(new DataInputStream(new FileInputStream(args[0]))).debugToString());
             } else {
                 InputStream is = Class.forName(args[0]).getClassLoader().getResourceAsStream(args[0].replace('.', '/')+".class");
-                System.out.println(new ClassFile(new DataInputStream(is)));
+                System.out.println(new ClassFile(new DataInputStream(is)).debugToString());
             }
         } else {
             /*
