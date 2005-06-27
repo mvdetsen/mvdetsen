@@ -38,6 +38,7 @@ public class Type {
     }
 
     public       String  toString() { return toString; }
+    public       String  debugToString() { return toString; }
     public final String  getDescriptor() { return descriptor; }
     public       int     hashCode() { return descriptor.hashCode(); }
     public       boolean equals(java.lang.Object o) { return this==o; }
@@ -97,8 +98,33 @@ public class Type {
             return a;
         }
 
-        public Method method(String name, Type returnType, Type[] argTypes) { return new Method(name, returnType, argTypes); }
         public Field  field(String name, Type type) { return new Field(name, type); }
+        public Method method(String name, Type returnType, Type[] argTypes) { return new Method(name, returnType, argTypes); }
+        public Method method(String signature) {
+            // FEATURE: This parser is ugly but it works (and shouldn't be a problem) might want to clean it up though
+            String s = signature;
+            String name = s.startsWith("(") ? "" : s.substring(0, s.indexOf('('));
+            s = s.substring(s.indexOf('('));
+            int p = s.indexOf(')');
+            if(p == -1) throw new IllegalArgumentException("invalid method type descriptor");
+            String argsDesc = s.substring(1,p);
+            String retDesc = s.substring(p+1);
+            Type[] argsBuf = new Type[argsDesc.length()];
+            int i;
+            for(i=0,p=0;argsDesc.length() > 0;i++,p=0) {
+                while(p < argsDesc.length() && argsDesc.charAt(p) == '[') p++;
+                if(p == argsDesc.length())  throw new IllegalArgumentException("invalid method type descriptor");
+                if(argsDesc.charAt(p) == 'L') {
+                    p = argsDesc.indexOf(';');
+                    if(p == -1) throw new IllegalArgumentException("invalid method type descriptor");
+                }
+                argsBuf[i] = Type.instance(argsDesc.substring(0,p+1));
+                argsDesc = argsDesc.substring(p+1);
+            }
+            Type args[] = new Type[i];
+            System.arraycopy(argsBuf,0,args,0,i);
+            return method(name, Type.instance(retDesc), args);
+        }
 
         public abstract class Member {
             public final String name;
@@ -123,7 +149,9 @@ public class Type {
 
         public class Method extends Member {
             final Type[] argTypes;
-            final Type   returnType;
+            public final Type   returnType;
+            public Type getArgType(int i) { return argTypes[i]; }
+            public int  getNumArgs()      { return argTypes.length; }
             private Method(String name, Type returnType, Type[] argTypes) {
                 super(name);
                 this.argTypes = argTypes;
@@ -138,6 +166,16 @@ public class Type {
                 return sb.toString();
             }
         }
+    }
+    
+    // FEATURE: This probably isn't the best place for these
+    static String methodTypeDescriptor(Type[] argTypes, Type returnType) {
+        StringBuffer sb = new StringBuffer(argTypes.length*4);
+        sb.append("(");
+        for(int i=0;i<argTypes.length;i++) sb.append(argTypes[i].getDescriptor());
+        sb.append(")");
+        sb.append(returnType.getDescriptor());
+        return sb.toString();
+    }
 
-    }    
 }
