@@ -44,6 +44,7 @@ public class Type {
     public       boolean equals(java.lang.Object o) { return this==o; }
 
     public Type.Array  makeArray() { return (Type.Array)instance("["+descriptor); }
+    public Type.Array  makeArray(int i) { return i==0 ? this : makeArray().makeArray(i-1); }
 
     public Type.Ref    asRef()       { throw new RuntimeException("attempted to use "+this+" as a Type.Ref, which it is not"); }
     public Type.Class  asClass()     { throw new RuntimeException("attempted to use "+this+" as a Type.Class, which it is not"); }

@@ -25,7 +25,8 @@ public class MethodGen implements CGConst {
     private byte[] op;
     private Object[] arg;
     private ConstantPool.Ent[] cparg;
-    
+
+   
     // Constructors //////////////////////////////////////////////////////////////////////////////
 
     MethodGen(Type.Class.Method method, int flags) {
