@@ -199,7 +199,8 @@ public class ClassFile implements CGConst {
         }
     }
 
-    ClassFile(DataInput i) throws IOException {
+    ClassFile(DataInput i) throws IOException { this(i, false); }
+    ClassFile(DataInput i, boolean ssa) throws IOException {
         int magic = i.readInt();
         if (magic != 0xcafebabe) throw new ClassReadExn("invalid magic: " + Long.toString(0xffffffffL & magic, 16));
         minor = i.readShort();
@@ -215,7 +216,9 @@ public class ClassFile implements CGConst {
         int numFields = i.readShort();
         for(int j=0; j<numFields; j++) fields.addElement(new FieldGen(i, cp));
         int numMethods = i.readShort();
-        for(int j=0; j<numMethods; j++) methods.addElement(new MethodGen(this.getType(), i, cp));
+        for(int j=0; j<numMethods; j++) methods.addElement(ssa 
+                                                           ? new JSSA(this.getType(), i, cp) 
+                                                           : new MethodGen(this.getType(), i, cp));
         attributes = new AttrGen(i, cp);
         
         // FEATURE: Support these

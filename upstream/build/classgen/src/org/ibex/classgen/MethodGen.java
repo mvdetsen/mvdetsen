@@ -5,7 +5,7 @@ import java.util.*;
 
 /** A class representing a method in a generated classfile
     @see ClassFile#addMethod */
-public class MethodGen implements CGConst {
+public class MethodGen extends Type.Class.Method.Body implements CGConst {
     private final static boolean EMIT_NOPS = false;
     
     private static final int NO_CODE = -1;
@@ -30,6 +30,7 @@ public class MethodGen implements CGConst {
     // Constructors //////////////////////////////////////////////////////////////////////////////
 
     MethodGen(Type.Class.Method method, int flags) {
+        method.super();
         if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
         this.method = method;
         this.flags = flags;
@@ -43,10 +44,16 @@ public class MethodGen implements CGConst {
     }
 
     MethodGen(Type.Class c, DataInput in, ConstantPool cp) throws IOException {
-        this.flags = in.readShort();
+        this(in.readShort(), cp.getUtf8KeyByIndex(in.readShort()), c, in, cp); }
+
+    private MethodGen(short flags, String name, Type.Class c, DataInput in, ConstantPool cp) throws IOException {
+        this(flags, name, c.method(name+cp.getUtf8KeyByIndex(in.readShort())), c, in, cp); }
+    private MethodGen(short flags, String name, Type.Class.Method m,
+                      Type.Class c, DataInput in, ConstantPool cp) throws IOException {
+        m.super();
+        this.flags = flags;
         if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new ClassFile.ClassReadExn("invalid flags");
-        String name = cp.getUtf8KeyByIndex(in.readShort());
-        this.method = c.method(name+cp.getUtf8KeyByIndex(in.readShort()));
+        this.method = m;
         this.attrs = new ClassFile.AttrGen(in,cp);
         
         if ((flags & (NATIVE|ABSTRACT))==0)  {
@@ -317,6 +324,9 @@ public class MethodGen implements CGConst {
 
     // Accessors //////////////////////////////////////////////////////////////////////////////
     
+    public int getFlags() { return flags; }
+    public Hashtable getThrownExceptions() { return thrownExceptions; }
+
     /** Returns the size (in instructions) of this method 
         @return The size of the method (in instructions)
     */
@@ -944,7 +954,7 @@ public class MethodGen implements CGConst {
 
     // Debugging //////////////////////////////////////////////////////////////////////////////
 
-    public void debugToString(StringBuffer sb, String constructorName) {
+    public void debugBodyToString(StringBuffer sb) {
         // This is intentionally a local variable so it can be removed by gcclass
         final String[] OP_NAMES = new String[]{
             "nop", "aconst_null", "iconst_m1", "iconst_0", "iconst_1", "iconst_2", 
@@ -991,34 +1001,18 @@ public class MethodGen implements CGConst {
             "", "", "", "", "", "", 
             "", "", "", ""
         };
-        
-        sb.append("  ").append(ClassFile.flagsToString(flags,false));
-        sb.append(method.debugToString());
-        if (thrownExceptions.size() > 0) {
-            sb.append("throws");
-            for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
-                sb.append(" ").append(((Type.Class)e.nextElement()).debugToString()).append(",");
-            sb.setLength(sb.length()-1);
-            sb.append(" ");
-        }
-        if ((flags & (NATIVE|ABSTRACT))==0) {
-            sb.append("{\n");
-            for(int i=0;i<size();i++) {
-                sb.append("    ");
-                for(int j=i==0?1:i;j<10000;j*=10) sb.append(" ");
-                sb.append(i).append(": ");
-                sb.append(OP_NAMES[op[i]&0xff]);
-                String s = null;
-                if (arg[i] instanceof Type) s = ((Type)arg[i]).debugToString();
-                else if (arg[i] instanceof Type.Class.Member) s = ((Type.Class.Member)arg[i]).toString();
-                else if (arg[i] instanceof String) s = "\"" + s + "\"";
-                else if (arg[i] != null) s = arg[i].toString();
-                if (s != null) sb.append(" ").append(s);
-                sb.append("\n");
-            }
-            sb.append("  }\n");
-        } else {
-            sb.append(";");
+        for(int i=0;i<size();i++) {
+            sb.append("    ");
+            for(int j=i==0?1:i;j<10000;j*=10) sb.append(" ");
+            sb.append(i).append(": ");
+            sb.append(OP_NAMES[op[i]&0xff]);
+            String s = null;
+            if (arg[i] instanceof Type) s = ((Type)arg[i]).debugToString();
+            else if (arg[i] instanceof Type.Class.Member) s = ((Type.Class.Member)arg[i]).toString();
+            else if (arg[i] instanceof String) s = "\"" + s + "\"";
+            else if (arg[i] != null) s = arg[i].toString();
+            if (s != null) sb.append(" ").append(s);
+            sb.append("\n");
         }
     }
 

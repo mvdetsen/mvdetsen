@@ -3,7 +3,7 @@ package org.ibex.classgen;
 import java.util.StringTokenizer;
 import java.util.Hashtable;
 
-public class Type {
+public class Type implements CGConst {
 
     private static Hashtable instances = new Hashtable();  // this has to appear at the top of the file
 
@@ -186,6 +186,30 @@ public class Type {
                 sb.append(")");
                 sb.append(returnType.getDescriptor());
                 return sb.toString();
+            }
+            public abstract class Body implements HasFlags {
+                public abstract java.util.Hashtable getThrownExceptions();
+                public abstract void debugBodyToString(StringBuffer sb);
+                public void debugToString(StringBuffer sb, String constructorName) {
+                    int flags = getFlags();
+                    sb.append("  ").append(ClassFile.flagsToString(flags,false));
+                    sb.append(Method.this.debugToString());
+                    java.util.Hashtable thrownExceptions = getThrownExceptions();
+                    if (thrownExceptions.size() > 0) {
+                        sb.append("throws");
+                        for(java.util.Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
+                            sb.append(" ").append(((Type.Class)e.nextElement()).debugToString()).append(",");
+                        sb.setLength(sb.length()-1);
+                        sb.append(" ");
+                    }
+                    if ((flags & (NATIVE|ABSTRACT))==0) {
+                        sb.append("{\n");
+                        debugBodyToString(sb);
+                        sb.append("  }\n");
+                    } else {
+                        sb.append(";");
+                    }
+                }
             }
         }
     }
