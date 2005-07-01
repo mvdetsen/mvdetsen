@@ -13,7 +13,7 @@ public class ClassFile implements CGConst {
     final int flags;
     
     private final Vector fields = new Vector();
-    private final Vector methods = new Vector();
+    public final Vector methods = new Vector();
     
     private final AttrGen attributes;
 

@@ -141,6 +141,8 @@ public class Type {
                     o.getDescriptor().equals(getDescriptor());
             }
             public int hashCode() { return getDeclaringClass().hashCode() ^ name.hashCode() ^ getDescriptor().hashCode(); }
+            public String toString() { return debugToString(); }
+            public abstract String debugToString();
         }
     
         public class Field extends Member {
@@ -148,6 +150,7 @@ public class Type {
             private Field(String name, Type t) { super(name); this.type = t; }
             public String getDescriptor() { return name; }
             public Type getType() { return type; }
+            public String debugToString() { return getDeclaringClass()+"."+name+"["+type+"]"; }
         }
 
         public class Method extends Member {

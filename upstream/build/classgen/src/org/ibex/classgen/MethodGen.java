@@ -10,7 +10,7 @@ public class MethodGen implements CGConst {
     
     private static final int NO_CODE = -1;
 
-    private final Type.Class.Method method;
+    public final Type.Class.Method method;
     private final int flags;
     private final ClassFile.AttrGen attrs;
     private final ClassFile.AttrGen codeAttrs;
