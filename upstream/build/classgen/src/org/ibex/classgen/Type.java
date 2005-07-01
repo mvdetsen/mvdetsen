@@ -44,7 +44,7 @@ public class Type {
     public       boolean equals(java.lang.Object o) { return this==o; }
 
     public Type.Array  makeArray() { return (Type.Array)instance("["+descriptor); }
-    public Type.Array  makeArray(int i) { return i==0 ? this : makeArray().makeArray(i-1); }
+    public Type.Array  makeArray(int i) { return i==0 ? (Type.Array)this : makeArray().makeArray(i-1); }
 
     public Type.Ref    asRef()       { throw new RuntimeException("attempted to use "+this+" as a Type.Ref, which it is not"); }
     public Type.Class  asClass()     { throw new RuntimeException("attempted to use "+this+" as a Type.Class, which it is not"); }
@@ -76,6 +76,7 @@ public class Type {
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
         public int dimension() { return getDescriptor().lastIndexOf('['); }
+        public Type getElementType() { return Type.instance(getDescriptor().substring(0, getDescriptor().length()-1)); }
     }
 
     public static class Class extends Type.Ref {
@@ -146,6 +147,7 @@ public class Type {
             public final Type type;
             private Field(String name, Type t) { super(name); this.type = t; }
             public String getDescriptor() { return name; }
+            public Type getType() { return type; }
         }
 
         public class Method extends Member {
@@ -153,6 +155,7 @@ public class Type {
             public final Type   returnType;
             public Type getArgType(int i) { return argTypes[i]; }
             public int  getNumArgs()      { return argTypes.length; }
+            public Type getReturnType()   { return returnType; }
             public String debugToString() {
                 StringBuffer sb = new StringBuffer();
                 if (name.equals("<clinit>")) sb.append("static ");
