@@ -126,7 +126,7 @@ class ConstantPool implements CGConst {
                     return klass.getTypeClass().field(member.name.s, Type.instance(member.type.s));
                 case CONSTANT_METHODREF:
                 case CONSTANT_INTERFACEMETHODREF:
-                    Type.Class.Method m = klass.getTypeClass().method(member.name.s + member.type.s);
+                    Type.Class.Method m = klass.getTypeClass().method(member.name.s,member.type.s);
                     return tag == CONSTANT_INTERFACEMETHODREF ? (Object) new InterfaceMethodKey(m) : (Object) m;
                 default:
                     throw new Error("should never happen");

@@ -53,7 +53,7 @@ public class MethodGen extends Type.Class.Method.Body implements CGConst {
         m.super();
         this.flags = flags;
         if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new ClassFile.ClassReadExn("invalid flags");
-        this.method = m;
+        this.method = c.method(name,typeDescriptor);
         this.attrs = new ClassFile.AttrGen(in,cp);
         
         if ((flags & (NATIVE|ABSTRACT))==0)  {

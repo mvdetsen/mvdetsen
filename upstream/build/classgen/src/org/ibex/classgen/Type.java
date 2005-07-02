@@ -105,11 +105,10 @@ public class Type implements CGConst {
 
         public Field  field(String name, Type type) { return new Field(name, type); }
         public Method method(String name, Type returnType, Type[] argTypes) { return new Method(name, returnType, argTypes); }
-        public Method method(String signature) {
+        public Method method(String name, String typeDescriptor) {
             // FEATURE: This parser is ugly but it works (and shouldn't be a problem) might want to clean it up though
-            String s = signature;
-            String name = s.startsWith("(") ? "" : s.substring(0, s.indexOf('('));
-            s = s.substring(s.indexOf('('));
+            String s = typeDescriptor;
+            if(!s.startsWith("(")) throw new IllegalArgumentException("invalid method type descriptor");
             int p = s.indexOf(')');
             if(p == -1) throw new IllegalArgumentException("invalid method type descriptor");
             String argsDesc = s.substring(1,p);
