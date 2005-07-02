@@ -1008,7 +1008,7 @@ public class MethodGen extends Type.Class.Method.Body implements CGConst {
             sb.append(OP_NAMES[op[i]&0xff]);
             String s = null;
             if (arg[i] instanceof Type) s = ((Type)arg[i]).debugToString();
-            else if (arg[i] instanceof Type.Class.Member) s = ((Type.Class.Member)arg[i]).toString();
+            else if (arg[i] instanceof Type.Class.Member) s = ((Type.Class.Member)arg[i]).debugToString();
             else if (arg[i] instanceof String) s = "\"" + s + "\"";
             else if (arg[i] != null) s = arg[i].toString();
             if (s != null) sb.append(" ").append(s);
