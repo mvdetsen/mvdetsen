@@ -100,9 +100,6 @@ public class Type implements CGConst {
             return a;
         }
 
-        public abstract class Body extends HasFlags {
-        }
-
         public Field  field(String name, Type type) { return new Field(name, type); }
         public Method method(String name, Type returnType, Type[] argTypes) { return new Method(name, returnType, argTypes); }
         public Method method(String name, String typeDescriptor) {
