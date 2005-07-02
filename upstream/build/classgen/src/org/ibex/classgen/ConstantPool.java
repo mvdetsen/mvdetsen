@@ -236,7 +236,7 @@ class ConstantPool implements CGConst {
                     : m instanceof Type.Class.Method ? CONSTANT_METHODREF
                     : 0;
             if (tag == 0) throw new Error("should never happen");
-            ent = new MemberEnt(tag, m.getDeclaringClass(), m.name, m.getDescriptor());
+            ent = new MemberEnt(tag, m.getDeclaringClass(), m.name, m.getTypeDescriptor());
         } 
         else {
             throw new IllegalArgumentException("Unknown type passed to add");

@@ -579,7 +579,7 @@ public class MethodGen extends Type.Class.Method.Body implements CGConst {
     */
     void finish(ConstantPool cp) {
         cp.addUtf8(method.name);
-        cp.addUtf8(method.getDescriptor());
+        cp.addUtf8(method.getTypeDescriptor());
         
         for(Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
             cp.add(e.nextElement());
@@ -901,7 +901,7 @@ public class MethodGen extends Type.Class.Method.Body implements CGConst {
         
         o.writeShort(flags);
         o.writeShort(cp.getUtf8Index(method.name));
-        o.writeShort(cp.getUtf8Index(method.getDescriptor()));
+        o.writeShort(cp.getUtf8Index(method.getTypeDescriptor()));
         attrs.dump(o,cp);
     }
     

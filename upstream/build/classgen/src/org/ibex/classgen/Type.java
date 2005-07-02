@@ -132,6 +132,14 @@ public class Type implements CGConst {
             private Member(String name) { this.name = name; }
             public Type.Class getDeclaringClass() { return Type.Class.this; }
             public abstract String getDescriptor();
+            public boolean equals(Object o_) {
+                if(!(o_ instanceof Member)) return false;
+                Member o = (Member) o_;
+                return o.getDeclaringClass().equals(getDeclaringClass()) &&
+                    o.name.equals(name) &&
+                    o.getDescriptor().equals(getDescriptor());
+            }
+            public int hashCode() { return getDeclaringClass().hashCode() ^ name.hashCode() ^ getDescriptor().hashCode(); }
             public String toString() { return debugToString(); }
             public abstract String debugToString();
         }
@@ -139,7 +147,7 @@ public class Type implements CGConst {
         public class Field extends Member {
             public final Type type;
             private Field(String name, Type t) { super(name); this.type = t; }
-            public String getDescriptor() { return type.getDescriptor(); }
+            public String getTypeDescriptor() { return type.getDescriptor(); }
             public Type getType() { return type; }
             public String debugToString() { return getDeclaringClass()+"."+name+"["+type+"]"; }
             public class Body extends HasFlags {
@@ -183,7 +191,6 @@ public class Type implements CGConst {
                 this.argTypes = argTypes;
                 this.returnType = returnType;
             }
-            //public Method.Body getBody(Context cx) { }
             public String getDescriptor() {
                 StringBuffer sb = new StringBuffer(argTypes.length*4);
                 sb.append("(");
