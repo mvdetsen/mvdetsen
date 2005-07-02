@@ -199,8 +199,8 @@ public class ClassFile implements CGConst {
         }
     }
 
-    ClassFile(DataInput i) throws IOException { this(i, false); }
-    ClassFile(DataInput i, boolean ssa) throws IOException {
+    public ClassFile(DataInput i) throws IOException { this(i, false); }
+    public ClassFile(DataInput i, boolean ssa) throws IOException {
         int magic = i.readInt();
         if (magic != 0xcafebabe) throw new ClassReadExn("invalid magic: " + Long.toString(0xffffffffL & magic, 16));
         minor = i.readShort();
