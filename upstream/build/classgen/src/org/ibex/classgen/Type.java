@@ -148,7 +148,7 @@ public class Type implements CGConst {
         public class Field extends Member {
             public final Type type;
             private Field(String name, Type t) { super(name); this.type = t; }
-            public String getDescriptor() { return name; }
+            public String getDescriptor() { return type.getDescriptor(); }
             public Type getType() { return type; }
             public String debugToString() { return getDeclaringClass()+"."+name+"["+type+"]"; }
         }
