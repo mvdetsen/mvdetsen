@@ -23,7 +23,7 @@ public class FieldGen implements CGConst {
     
     FieldGen(DataInput in, ConstantPool cp) throws IOException {
         flags = in.readShort();
-        if((flags & ~(PUBLIC|PRIVATE|PROTECTED|VOLATILE|TRANSIENT|STATIC|FINAL)) != 0)
+        if((flags & ~VALID_FIELD_FLAGS) != 0)
             throw new ClassFile.ClassReadExn("invalid flags");        
         name = cp.getUtf8KeyByIndex(in.readShort());
         type = Type.instance(cp.getUtf8KeyByIndex(in.readShort()));
@@ -31,7 +31,7 @@ public class FieldGen implements CGConst {
     }
 
     FieldGen(ClassFile owner, String name, Type type, int flags) {
-        if((flags & ~(PUBLIC|PRIVATE|PROTECTED|VOLATILE|TRANSIENT|STATIC|FINAL)) != 0)
+        if((flags & ~VALID_FIELD_FLAGS) != 0)
             throw new IllegalArgumentException("invalid flags");
         this.name = name;
         this.type = type;

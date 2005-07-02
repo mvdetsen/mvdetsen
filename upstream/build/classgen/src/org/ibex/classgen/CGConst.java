@@ -25,6 +25,7 @@ public interface CGConst {
     // Field only
     public static final int VOLATILE  = 0x0040;
     public static final int TRANSIENT = 0x0080;
+    public static final int VALID_FIELD_FLAGS = PUBLIC|PRIVATE|PROTECTED|VOLATILE|TRANSIENT|STATIC|FINAL;
 
     
     // Constant Pool Stuff
