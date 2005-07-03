@@ -557,12 +557,16 @@ public class JSSA extends MethodGen implements CGConst {
                 Type.Class.Method method = (Type.Class.Method)arg;
                 Expr args[] = new Expr[method.getNumArgs()];
                 for(int i=0; i<args.length; i++) args[args.length-i-1] = pop();
+                Expr ret;
                 switch(op) {
-                    case INVOKEVIRTUAL:   return push(new InvokeVirtual(method, args, pop()));
-                    case INVOKEINTERFACE: return push(new InvokeInterface(method, args, pop()));
-                    case INVOKESPECIAL:   return push(new InvokeSpecial(method, args, pop()));
-                    case INVOKESTATIC:    return push(new InvokeStatic(method, args));
+                    case INVOKEVIRTUAL:   ret = new InvokeVirtual(method, args, pop()); break;
+                    case INVOKEINTERFACE: ret = new InvokeInterface(method, args, pop()); break;
+                    case INVOKESPECIAL:   ret = new InvokeSpecial(method, args, pop()); break;
+                    case INVOKESTATIC:    ret = new InvokeStatic(method, args); break;
+                    default: throw new Error("should never happen");
                 }
+                if(ret.getType() != Type.VOID) push(ret);
+                return ret;
             }
 
                 // Field Access //////////////////////////////////////////////////////////////////////////////
