@@ -19,12 +19,12 @@ public abstract class Type implements CGConst {
     public static final Type CHAR = new Primitive("C", "char");
     public static final Type SHORT = new Primitive("S", "short");
     
-    public static final Type.Class OBJECT = new Type.Class("java.lang.Object");
-    public static final Type.Class STRING = new Type.Class("java.lang.String");
-    public static final Type.Class STRINGBUFFER = new Type.Class("java.lang.StringBuffer");
-    public static final Type.Class INTEGER_OBJECT = new Type.Class("java.lang.Integer");
-    public static final Type.Class DOUBLE_OBJECT = new Type.Class("java.lang.Double");
-    public static final Type.Class FLOAT_OBJECT = new Type.Class("java.lang.Float");
+    public static final Type.Class OBJECT = Type.Class.instance("java.lang.Object");
+    public static final Type.Class STRING = Type.Class.instance("java.lang.String");
+    public static final Type.Class STRINGBUFFER = Type.Class.instance("java.lang.StringBuffer");
+    public static final Type.Class INTEGER_OBJECT = Type.Class.instance("java.lang.Integer");
+    public static final Type.Class DOUBLE_OBJECT = Type.Class.instance("java.lang.Double");
+    public static final Type.Class FLOAT_OBJECT = Type.Class.instance("java.lang.Float");
     
     /** A zero element Type[] array (can be passed as the "args" param when a method takes no arguments */
     public static final Type[] NO_ARGS = new Type[0];
@@ -41,8 +41,6 @@ public abstract class Type implements CGConst {
     public abstract String debugToString();
     
     public final String  getDescriptor() { return descriptor; }
-    public       int     hashCode() { return descriptor.hashCode(); }
-    public       boolean equals(java.lang.Object o) { return this==o; }
 
     public Type.Array  makeArray() { return (Type.Array)instance("["+descriptor); }
     public Type.Array  makeArray(int i) { return i==0 ? (Type.Array)this : makeArray().makeArray(i-1); }
@@ -64,9 +62,9 @@ public abstract class Type implements CGConst {
         instances.put(descriptor, this);
     }
 
-    static class Primitive extends Type {
+    public static class Primitive extends Type {
         private String humanReadable;
-        protected Primitive(String descriptor, String humanReadable) {
+        Primitive(String descriptor, String humanReadable) {
             super(descriptor);
             this.humanReadable = humanReadable;
         }
@@ -94,7 +92,9 @@ public abstract class Type implements CGConst {
         protected Class(String s) { super(_initHelper(s)); }
         public Type.Class asClass() { return this; }
         public boolean isClass() { return true; }
-        public String getShortName() { return toString.substring(toString.lastIndexOf('.')+1); }
+        public static Type.Class instance(String className) {
+            return (Type.Class)Type.instance("L"+className.replace('.', '/')+";"); }
+        //public boolean extendsOrImplements(Type.Class c, Context cx) { }
         String internalForm() { return descriptor.substring(1, descriptor.length()-1); }
         public String debugToString() { return internalForm().replace('/','.'); }
         public String getShortName() {
@@ -112,11 +112,18 @@ public abstract class Type implements CGConst {
             return a;
         }
 
-        public Field  field(String name, Type type) { return new Field(name, type); }
+        public Field field(String name, Type type) { return new Field(name, type); }
+        public abstract class Body extends HasFlags {
+        }
+
         public Method method(String name, Type returnType, Type[] argTypes) { return new Method(name, returnType, argTypes); }
-        public Method method(String name, String typeDescriptor) {
+        public Method method(String leftCrap, String rightCrap) { return method(leftCrap+rightCrap); }
+
+        /** see JVM Spec section 2.10.2 */
+        public Method method(String signature) {
             // FEATURE: This parser is ugly but it works (and shouldn't be a problem) might want to clean it up though
-            String s = typeDescriptor;
+            String name = signature.substring(0, signature.indexOf('('));
+            String s = signature.substring(signature.indexOf('('));
             if(!s.startsWith("(")) throw new IllegalArgumentException("invalid method type descriptor");
             int p = s.indexOf(')');
             if(p == -1) throw new IllegalArgumentException("invalid method type descriptor");
@@ -143,16 +150,8 @@ public abstract class Type implements CGConst {
             public final String name;
             private Member(String name) { this.name = name; }
             public Type.Class getDeclaringClass() { return Type.Class.this; }
-            public abstract String getDescriptor();
-            public boolean equals(Object o_) {
-                if(!(o_ instanceof Member)) return false;
-                Member o = (Member) o_;
-                return o.getDeclaringClass().equals(getDeclaringClass()) &&
-                    o.name.equals(name) &&
-                    o.getDescriptor().equals(getDescriptor());
-            }
-            public int hashCode() { return getDeclaringClass().hashCode() ^ name.hashCode() ^ getDescriptor().hashCode(); }
-            public String toString() { return debugToString(); }
+            public String getName() { return name; }
+            public abstract String getTypeDescriptor();
             public abstract String debugToString();
         }
     
@@ -161,7 +160,12 @@ public abstract class Type implements CGConst {
             private Field(String name, Type t) { super(name); this.type = t; }
             public String getTypeDescriptor() { return type.getDescriptor(); }
             public Type getType() { return type; }
-            public String debugToString() { return getDeclaringClass()+"."+name+"["+type+"]"; }
+            public class Body extends HasFlags {
+                public final int flags;
+                public Body(int flags) { this.flags = flags; }
+                public int getFlags() { return flags; }
+            }
+            public String debugToString() { return getDeclaringClass().debugToString()+"."+name+"["+type.debugToString()+"]"; }
         }
 
         public class Method extends Member {
@@ -175,7 +179,6 @@ public abstract class Type implements CGConst {
                 System.arraycopy(argTypes, 0, ret, 0, ret.length);
                 return ret;
             }
-
             public boolean isConstructor() { return getName().equals("<init>"); }
             public boolean isClassInitializer() { return getName().equals("<clinit>"); }
             public String debugToString() {
@@ -198,7 +201,8 @@ public abstract class Type implements CGConst {
                 this.argTypes = argTypes;
                 this.returnType = returnType;
             }
-            public String getDescriptor() {
+            //public Method.Body getBody(Context cx) { }
+            public String getTypeDescriptor() {
                 StringBuffer sb = new StringBuffer(argTypes.length*4);
                 sb.append("(");
                 for(int i=0;i<argTypes.length;i++) sb.append(argTypes[i].getDescriptor());
