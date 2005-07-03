@@ -333,6 +333,7 @@ public class JSSA extends MethodGen implements CGConst {
 
     public class Constant extends Expr {
         private final Object o;
+        public Constant(int i) { this(new Integer(i)); }
         public Constant(Object o) { this.o = o; }
         public String toString() { return o.toString(); }
         public Type getType() {
