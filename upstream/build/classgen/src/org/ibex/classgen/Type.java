@@ -141,15 +141,14 @@ public abstract class Type implements CGConst {
         }
 
         public Field field(String name, Type type) { return new Field(name, type); }
+        public Field field(String name, String descriptor) { return field(name,Type.fromDescriptor(descriptor)); }
 
         public Method method(String name, Type returnType, Type[] argTypes) { return new Method(name, returnType, argTypes); }
-        public Method method(String leftCrap, String rightCrap) { return method(leftCrap+rightCrap); }
 
         /** see JVM Spec section 2.10.2 */
-        public Method method(String signature) {
+        public Method method(String name, String descriptor) {
             // FEATURE: This parser is ugly but it works (and shouldn't be a problem) might want to clean it up though
-            String name = signature.substring(0, signature.indexOf('('));
-            String s = signature.substring(signature.indexOf('('));
+            String s = descriptor;
             if(!s.startsWith("(")) throw new IllegalArgumentException("invalid method type descriptor");
             int p = s.indexOf(')');
             if(p == -1) throw new IllegalArgumentException("invalid method type descriptor");

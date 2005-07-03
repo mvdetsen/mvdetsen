@@ -123,7 +123,7 @@ class ConstantPool implements CGConst {
             if(member.name == null) throw new Error("should never happen");
             switch(tag) {
                 case CONSTANT_FIELDREF:
-                    return klass.getTypeClass().field(member.name.s, Type.fromDescriptor(member.type.s));
+                    return klass.getTypeClass().field(member.name.s, member.type.s);
                 case CONSTANT_METHODREF:
                 case CONSTANT_INTERFACEMETHODREF:
                     Type.Class.Method m = klass.getTypeClass().method(member.name.s,member.type.s);

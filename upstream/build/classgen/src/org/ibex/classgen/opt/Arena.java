@@ -18,7 +18,7 @@ public class Arena implements CGConst {
     // Initializers //////////////////////////////////////////////////////////////////////////////
 
     public static Type.Class        System_class     = Type.Class.instance("java.lang.System");
-    public static Type.Class.Method System_arraycopy = System_class.method("arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V");
+    public static Type.Class.Method System_arraycopy = System_class.method("arraycopy","(Ljava/lang/Object;ILjava/lang/Object;II)V");
     public static Type.Class        Gladiator_class  = Type.Class.instance("org.ibex.classgen.opt.Arena$Gladiator");
 
     boolean          implementsGladiator(Type t)          { return t instanceof Type.Class && implementsGladiator((Type.Class)t);}
