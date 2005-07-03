@@ -163,12 +163,16 @@ public abstract class Type implements CGConst {
             private Field(String name, Type t) { super(name); this.type = t; }
             public String getTypeDescriptor() { return type.getDescriptor(); }
             public Type getType() { return type; }
+            public String debugToString() { return getDeclaringClass().debugToString()+"."+name+"["+type.debugToString()+"]"; }
             public class Body extends HasFlags {
                 public final int flags;
-                public Body(int flags) { this.flags = flags; }
+                public Body(int flags) {
+                    if ((flags & ~VALID_FIELD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
+                    this.flags = flags;
+                }
                 public int getFlags() { return flags; }
+                public Field getField() { return Field.this; }
             }
-            public String debugToString() { return getDeclaringClass().debugToString()+"."+name+"["+type.debugToString()+"]"; }
         }
 
         public class Method extends Member {

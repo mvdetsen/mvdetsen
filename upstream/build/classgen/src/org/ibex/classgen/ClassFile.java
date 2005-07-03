@@ -104,7 +104,7 @@ public class ClassFile extends Type.Class.Body {
         @see CGConst
         */  
     public final FieldGen addField(String name, Type type, int flags) {
-        FieldGen fg = new FieldGen(this, name, type, flags);
+        FieldGen fg = new FieldGen(getType().field(name, type), flags);
         fields.addElement(fg);
         return fg;
     }
@@ -223,7 +223,7 @@ public class ClassFile extends Type.Class.Body {
         interfaces = new Type.Class[i.readShort()];
         for(int j=0; j<interfaces.length; j++) interfaces[j] = (Type.Class) cp.getKeyByIndex(i.readShort());
         int numFields = i.readShort();
-        for(int j=0; j<numFields; j++) fields.addElement(new FieldGen(i, cp));
+        for(int j=0; j<numFields; j++) fields.addElement(new FieldGen(this, i, cp));
         int numMethods = i.readShort();
         for(int j=0; j<numMethods; j++) methods.addElement(ssa 
                                                            ? new JSSA(this.getType(), i, cp) 
