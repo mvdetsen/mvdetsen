@@ -142,55 +142,101 @@ public class JSSA extends MethodGen implements CGConst {
         public String toString() { return name; }
         public Type getType() { return t; }
     }
-
+    
+    // Unary Operations
+    public class Not extends Expr {
+        public final Expr e;
+        public Not(Expr e) {
+            if(e.getType() != Type.BOOLEAN) throw new IllegalArgumentException("not needs a boolean expression");
+            this.e = e;
+        }
+        public Type getType() { return Type.BOOLEAN; }
+        public String toString() { return "!(" + e + ")"; }
+    }
+    
+    public class Neg extends Expr {
+        public final Expr e;
+        public Neg(Expr e) {
+            if(!e.getType().isPrimitive()) throw new IllegalArgumentException("can only negate a primitive");
+            this.e = e;
+        }
+        public Type getType() { return e.getType(); }
+        public String toString() { return "- (" + e + ")"; }
+    }
+    
     // Binary Operations //////////////////////////////////////////////////////////////////////////////
 
     public abstract class BinExpr extends Expr {
         public final Expr e1;
         public final Expr e2;
-        public BinExpr(Expr e1, Expr e2) { this.e1 = e1; this.e2 = e2; }
+        private final String show;
+        public BinExpr(Expr e1, Expr e2, String show) { this.e1 = e1; this.e2 = e2; this.show = show; }
         public String toString() {
-            return name() + "("+e1+", "+e2+")";
+            // FEATURE: should we be doing some precedence stuff here? probably no worth it for debugging output
+            return "(" + e1 + show + e2 + ")";
         }
     }
 
     public class Comparison extends BinExpr {
-        public Comparison(Expr e1, Expr e2) { super(e1, e2); }
-        public Type getType() { return Type.BOOLEAN; }
-    }
-    public class Gt extends Comparison { public Gt(Expr e1, Expr e2) { super(e1, e2); } }
-    public class Lt extends Comparison { public Lt(Expr e1, Expr e2) { super(e1, e2); } }
-    public class Eq extends Comparison { public Eq(Expr e1, Expr e2) { super(e1, e2); } }
-    public class Not extends Expr {
-        public final Expr e;
-        public Not(Expr e) { this.e = e; }
+        public Comparison(Expr e1, Expr e2, String show) { super(e1, e2, show); }
         public Type getType() { return Type.BOOLEAN; }
     }
 
-    // Math Operations //////////////////////////////////////////////////////////////////////////////
-
-    public class Math extends BinExpr {
-        private final String show;
-        public Math(Expr e1, Expr e2, String show) { super(e2, e1); this.show = show; }
-        public String toString() { return e1+" "+show+" "+e2; }
-        public Type getType() {
-            Type t = e1.getType();
-            if (t != e2.getType()) throw new Error("types disagree");
-            return t;
+    public class Eq extends Comparison {
+        public Eq(Expr e1, Expr e2) {
+            super(e1, e2, "=="); 
+            if(e1.getType().isPrimitive() != e2.getType().isPrimitive())
+                throw new IllegalArgumentException("type mismatch");
+            if(e1.getType().isPrimitive() && e1.getType() != e2.getType())
+                throw new IllegalArgumentException("type mismatch");            
+            // FEATURE: Check if we can compare these classes
         }
     }
-    public class Add  extends Math { public  Add(Expr e, Expr e2) { super(e, e2, "+"); } }
-    public class Sub  extends Math { public  Sub(Expr e, Expr e2) { super(e, e2, "-"); } }
-    public class Mul  extends Math { public  Mul(Expr e, Expr e2) { super(e, e2, "*"); } }
-    public class Rem  extends Math { public  Rem(Expr e, Expr e2) { super(e, e2, "%"); } }
-    //public class Neg  extends Math { public  Neg(Expr e) { super(e, "-"); } }
-    public class Div  extends Math { public  Div(Expr e, Expr e2) { super(e, e2, "/"); } }
-    public class Shl  extends Math { public  Shl(Expr e, Expr e2) { super(e, e2, "<<"); } }
-    public class Shr  extends Math { public  Shr(Expr e, Expr e2) { super(e, e2, ">>"); } }
-    public class Ushr extends Math { public Ushr(Expr e, Expr e2) { super(e, e2, ">>>"); } }
-    public class And  extends Math { public  And(Expr e, Expr e2) { super(e, e2, "&"); } }
-    public class Or   extends Math { public   Or(Expr e, Expr e2) { super(e, e2, "|"); } }
-    public class Xor  extends Math { public  Xor(Expr e, Expr e2) { super(e, e2, "^"); } }
+    
+
+    public class PrimitiveComparison extends Comparison {
+        public PrimitiveComparison(Expr e1, Expr e2, String show) {
+            super(e1, e2, show);
+            if(!e1.getType().isPrimitive() || e1.getType() != e2.getType()) throw new IllegalArgumentException("type mismatch");
+        }
+    }
+    
+    public class Gt extends PrimitiveComparison { public Gt(Expr e1, Expr e2) { super(e1, e2, ">"); } }
+    public class Lt extends PrimitiveComparison { public Lt(Expr e1, Expr e2) { super(e1, e2, "<"); } }
+    public class Ge extends PrimitiveComparison { public Ge(Expr e1, Expr e2) { super(e1, e2, ">="); } }
+    public class Le extends PrimitiveComparison { public Le(Expr e1, Expr e2) { super(e1, e2, "<="); } }
+    
+    // Math Operations //////////////////////////////////////////////////////////////////////////////
+
+    public class BinMath extends BinExpr {
+        public BinMath(Expr e1, Expr e2, String show) {
+            super(e2, e1, show); 
+            if(e1.getType() != e2.getType()) throw new IllegalArgumentException("types disagree");
+        }
+        public Type getType() { return e1.getType(); }
+    }
+    
+    public class Add  extends BinMath { public  Add(Expr e, Expr e2) { super(e, e2, "+"); } }
+    public class Sub  extends BinMath { public  Sub(Expr e, Expr e2) { super(e, e2, "-"); } }
+    public class Mul  extends BinMath { public  Mul(Expr e, Expr e2) { super(e, e2, "*"); } }
+    public class Rem  extends BinMath { public  Rem(Expr e, Expr e2) { super(e, e2, "%"); } }
+    public class Div  extends BinMath { public  Div(Expr e, Expr e2) { super(e, e2, "/"); } }
+    public class And  extends BinMath { public  And(Expr e, Expr e2) { super(e, e2, "&"); } }
+    public class Or   extends BinMath { public   Or(Expr e, Expr e2) { super(e, e2, "|"); } }
+    public class Xor  extends BinMath { public  Xor(Expr e, Expr e2) { super(e, e2, "^"); } }
+    
+    public class BitShiftExpr extends BinExpr {
+        public BitShiftExpr(Expr e1, Expr e2, String show) {
+            super(e1,e2,show);
+            Type t = e1.getType();
+            if(t != Type.INT && t != Type.LONG) throw new IllegalArgumentException("type mismatch");
+            if(e2.getType() != Type.INT) throw new IllegalArgumentException("type mismatch");
+        }
+        public Type getType() { return e1.getType(); }
+    }
+    public class Shl  extends BitShiftExpr { public  Shl(Expr e, Expr e2) { super(e, e2, "<<"); } }
+    public class Shr  extends BitShiftExpr { public  Shr(Expr e, Expr e2) { super(e, e2, ">>"); } }
+    public class Ushr extends BitShiftExpr { public Ushr(Expr e, Expr e2) { super(e, e2, ">>>"); } }
 
     // Other operations //////////////////////////////////////////////////////////////////////////////
 
@@ -259,8 +305,6 @@ public class JSSA extends MethodGen implements CGConst {
         public Type getType() { return t; }
     }
     
-    // FEATURE: Array stuff
-
     public class Return extends Op {
         final Expr e;
         public Return() { this(VOID_EXPR); }
