@@ -133,7 +133,7 @@ public class MethodGen extends Type.Class.Method.Body {
                     break;
                 }
                 case MULTIANEWARRAY:
-                    arg = new MultiANewArray((Type.Class)cp.getKeyByIndex(in.readUnsignedShort()),in.readUnsignedByte());
+                    arg = new MultiANewArray((Type.Array)cp.getKeyByIndex(in.readUnsignedShort()),in.readUnsignedByte());
                     break;
                 case INVOKEINTERFACE: {
                     ConstantPool.Ent ent = cp.getByIndex(in.readUnsignedShort());
@@ -532,9 +532,9 @@ public class MethodGen extends Type.Class.Method.Body {
     }
     
     public static class MultiANewArray {
-        public Type.Class type;
+        public Type.Array type;
         public int dims;
-        public MultiANewArray(Type.Class type, int dims) { this.type = type; this.dims = dims; }
+        public MultiANewArray(Type.Array type, int dims) { this.type = type; this.dims = dims; }
     }
     
     public static class Wide {

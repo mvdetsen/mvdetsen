@@ -220,12 +220,21 @@ public class JSSA extends MethodGen implements CGConst {
         public Label(int i) { this.op = null; /* FIXME */ }
     }
 
-    public class Allocate extends Expr {
-        public final Type t;
+    public class New extends Expr {
+        public final Type.Class t;
         public Type getType() { return t; }
-        public Allocate(Type t) { this.t = t; }
-        public Allocate(Type.Array t, Expr e) { this.t = t; }
+        public New(Type.Class t) { this.t = t; }
     }
+    
+    public class NewArray extends Expr {
+        public final Type.Array t;
+        public final Expr[] dims;
+        public NewArray(Type.Array t, Expr[] dims) { this.t = t; this.dims = dims; }
+        public NewArray(Type.Array t, Expr dim) { this(t,new Expr[]{dim}); }
+        public Type getType() { return t; }
+    }
+    
+    // FEATURE: Array stuff
 
     public class Return extends Op {
         final Expr e;
@@ -353,7 +362,6 @@ public class JSSA extends MethodGen implements CGConst {
     // Implementation //////////////////////////////////////////////////////////////////////////////
 
     private Object addOp(int op, Object arg) {
-        Number number = null;
         int i1 = 0;
         int i2 = 0;
         if (op==WIDE) {
@@ -369,7 +377,6 @@ public class JSSA extends MethodGen implements CGConst {
             i1 = p.i1;
             i2 = p.i2;
         }
-        if (arg != null && arg instanceof Number) number = (Number)arg;
         switch(op) {
 
             case NOP: return null;
@@ -485,10 +492,31 @@ public class JSSA extends MethodGen implements CGConst {
 
                 // Allocation //////////////////////////////////////////////////////////////////////////////
 
-            case NEW:               push(new Allocate((Type)arg)); return null;
-            case NEWARRAY:          push(new Allocate((Type.Array)arg, pop())); return null;
-            case ANEWARRAY:         push(new Allocate(Type.OBJECT.makeArray(), pop())); return null;
-            case MULTIANEWARRAY:    push(new Allocate(Type.OBJECT.makeArray(i2), null /* FIXME */)); return null;
+            case NEW:               push(new New((Type.Class)arg)); return null;
+            case NEWARRAY: {
+                Type base;
+                switch(((Integer)arg).intValue()) {
+                    case 4: base = Type.BOOLEAN; break;
+                    case 5: base = Type.CHAR; break;
+                    case 6: base = Type.FLOAT; break;
+                    case 7: base = Type.DOUBLE; break;
+                    case 8: base = Type.BYTE; break;
+                    case 9: base = Type.SHORT; break;
+                    case 10: base = Type.INT; break;
+                    case 11: base = Type.LONG; break;
+                    default: throw new IllegalStateException("invalid array type");
+                }
+                push(new NewArray(base.makeArray(),pop()));
+                return null;
+            }
+            case ANEWARRAY:         push(new NewArray(((Type.Ref)arg).makeArray(), pop())); return null;
+            case MULTIANEWARRAY: {
+                MethodGen.MultiANewArray mana = (MethodGen.MultiANewArray) arg;
+                Expr[] dims = new Expr[mana.dims];
+                for(int i=0;i<dims.length;i++) dims[i] = pop();
+                push(new NewArray(mana.type, dims));
+                return null;
+            }
             case ARRAYLENGTH:       push(new ArrayLength(pop())); return null;
 
                 // Runtime Type information //////////////////////////////////////////////////////////////////////////////
