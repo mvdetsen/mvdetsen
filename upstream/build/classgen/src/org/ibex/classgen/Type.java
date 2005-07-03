@@ -115,9 +115,15 @@ public abstract class Type implements CGConst {
             return a;
         }
 
-        public Field field(String name, Type type) { return new Field(name, type); }
-        public abstract class Body extends HasFlags {
+        public abstract class Body extends HasAttributes {
+            public Body(int flags, ClassFile.AttrGen attrs) {
+                super(flags, attrs);
+                if ((flags & ~(PUBLIC|FINAL|SUPER|INTERFACE|ABSTRACT)) != 0)
+                    throw new IllegalArgumentException("invalid flags: " + Integer.toString(flags,16));
+            }
         }
+
+        public Field field(String name, Type type) { return new Field(name, type); }
 
         public Method method(String name, Type returnType, Type[] argTypes) { return new Method(name, returnType, argTypes); }
         public Method method(String leftCrap, String rightCrap) { return method(leftCrap+rightCrap); }
@@ -164,14 +170,12 @@ public abstract class Type implements CGConst {
             public String getTypeDescriptor() { return type.getDescriptor(); }
             public Type getType() { return type; }
             public String debugToString() { return getDeclaringClass().debugToString()+"."+name+"["+type.debugToString()+"]"; }
-            public class Body extends HasFlags {
-                public final int flags;
-                public Body(int flags) {
-                    if ((flags & ~VALID_FIELD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
-                    this.flags = flags;
-                }
-                public int getFlags() { return flags; }
+            public class Body extends HasAttributes {
                 public Field getField() { return Field.this; }
+                public Body(int flags, ClassFile.AttrGen attrs) {
+                    super(flags, attrs);
+                    if ((flags & ~VALID_FIELD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
+                }
             }
         }
 
@@ -217,9 +221,13 @@ public abstract class Type implements CGConst {
                 sb.append(returnType.getDescriptor());
                 return sb.toString();
             }
-            public abstract class Body extends HasFlags {
+            public abstract class Body extends HasAttributes {
                 public abstract java.util.Hashtable getThrownExceptions();
                 public abstract void debugBodyToString(StringBuffer sb);
+                public Body(int flags, ClassFile.AttrGen attrs) {
+                    super(flags, attrs);
+                    if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
+                }
                 public void debugToString(StringBuffer sb, String constructorName) {
                     int flags = getFlags();
                     sb.append("  ").append(ClassFile.flagsToString(flags,false));

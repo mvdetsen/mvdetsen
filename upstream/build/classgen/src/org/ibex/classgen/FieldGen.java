@@ -5,31 +5,27 @@ import java.io.*;
 /** Class representing a field in a generated classfile
     @see ClassFile#addField */
 public class FieldGen extends Type.Class.Field.Body {
-    private final ClassFile.AttrGen attrs;
 
     StringBuffer debugToString(StringBuffer sb) {
         sb.append(ClassFile.flagsToString(flags, false));
         sb.append(getField().getType().debugToString());
         sb.append(" ");
         sb.append(getField().getName());
-        if(attrs.contains("ConstantValue"))
-            sb.append(" = \"").append(attrs.get("ConstantValue")).append("\"");
+        if (attrs.contains("ConstantValue")) sb.append(" = \"").append(attrs.get("ConstantValue")).append("\"");
         sb.append(";");
         return sb;
     }
     
-    FieldGen(ClassFile cf, DataInput in, ConstantPool cp) throws IOException {
+    FieldGen(Type.Class c, DataInput in, ConstantPool cp) throws IOException {
         this(in.readShort(),
-             cf.getType().field(cp.getUtf8KeyByIndex(in.readShort()),
-                                Type.fromDescriptor(cp.getUtf8KeyByIndex(in.readShort()))));
+             c.field(cp.getUtf8KeyByIndex(in.readShort()),
+                     Type.fromDescriptor(cp.getUtf8KeyByIndex(in.readShort()))),
+             new ClassFile.AttrGen(in, cp));
     }
 
-    private FieldGen(int flags, Type.Class.Field field) { this(field, flags); }
+    private FieldGen(int flags, Type.Class.Field field, ClassFile.AttrGen attrs) { this(field, flags, attrs); }
     FieldGen(Type.Class.Field field, int flags) { this(field, flags, new ClassFile.AttrGen()); }
-    FieldGen(Type.Class.Field field, int flags, ClassFile.AttrGen attrs) {
-        field.super(flags);
-        this.attrs = attrs;
-   }
+    FieldGen(Type.Class.Field field, int flags, ClassFile.AttrGen attrs) { field.super(flags, attrs); }
     
     /** Sets the ContantValue attribute for this field. 
         @param val The value to set this field to. Must be an Integer, Long, Float, Double, or String */

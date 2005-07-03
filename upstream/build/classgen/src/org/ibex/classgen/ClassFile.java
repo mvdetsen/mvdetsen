@@ -10,13 +10,10 @@ public class ClassFile extends Type.Class.Body {
     private final Type.Class[] interfaces;
     private final short minor;
     private final short major;
-    final int flags;
     
     private final Vector fields = new Vector();
     public final Vector methods = new Vector();
     
-    private final AttrGen attributes;
-
     static String flagsToString(int flags, boolean isClass) {
         StringBuffer sb = new StringBuffer(32);
         if ((flags & PUBLIC) != 0)       sb.append("public ");
@@ -46,7 +43,7 @@ public class ClassFile extends Type.Class.Body {
         for(int i=0; i<interfaces.length; i++) sb.append((i==0?" ":", ")+interfaces[i].debugToString());
         sb.append(" {");
         sb.append(" // v"+major+"."+minor);
-        ConstantPool.Utf8Key sourceFile = (ConstantPool.Utf8Key) attributes.get("SourceFile");
+        ConstantPool.Utf8Key sourceFile = (ConstantPool.Utf8Key) attrs.get("SourceFile");
         if (sourceFile != null) sb.append(" from " + sourceFile.s);
         sb.append("\n");
         for(int i=0; i<fields.size(); i++) {
@@ -64,16 +61,12 @@ public class ClassFile extends Type.Class.Body {
 
     public ClassFile(Type.Class thisType, Type.Class superType, int flags) { this(thisType, superType, flags, null); }
     public ClassFile(Type.Class thisType, Type.Class superType, int flags, Type.Class[] interfaces) {
-        thisType.super();
+        thisType.super(flags, new AttrGen());
         this.thisType = thisType;
-        if((flags & ~(PUBLIC|FINAL|SUPER|INTERFACE|ABSTRACT)) != 0)
-            throw new IllegalArgumentException("invalid flags");
         this.superType = superType;
         this.interfaces = interfaces;
-        this.flags = flags;
         this.minor = 3;
         this.major = 45;        
-        this.attributes = new AttrGen();
     }
     
     /** Adds a new method to this class 
@@ -112,7 +105,7 @@ public class ClassFile extends Type.Class.Body {
     /** Sets the source value of the SourceFile attribute of this class 
         @param sourceFile The string to be uses as the SourceFile of this class
     */
-    public void setSourceFile(String sourceFile) { attributes.put("SourceFile", new ConstantPool.Utf8Key(sourceFile)); }
+    public void setSourceFile(String sourceFile) { attrs.put("SourceFile", new ConstantPool.Utf8Key(sourceFile)); }
     
     /** Writes the classfile data to the file specifed
         @see ClassFile#dump(OutputStream)
@@ -157,7 +150,7 @@ public class ClassFile extends Type.Class.Body {
         if(interfaces != null) for(int i=0;i<interfaces.length;i++) cp.add(interfaces[i]);
         for(int i=0;i<methods.size();i++) ((MethodGen)methods.elementAt(i)).finish(cp);
         for(int i=0;i<fields.size();i++) ((FieldGen)fields.elementAt(i)).finish(cp);
-        attributes.finish(cp);
+        attrs.finish(cp);
         
         cp.optimize();
         cp.seal();
@@ -181,7 +174,7 @@ public class ClassFile extends Type.Class.Body {
         o.writeShort(methods.size()); // methods_count
         for(int i=0;i<methods.size();i++) ((MethodGen)methods.elementAt(i)).dump(o,cp); // methods
         
-        attributes.dump(o,cp); // attributes        
+        attrs.dump(o,cp); // attributes        
     }
     
     public static ClassFile read(String s) throws IOException { return read(new File(s)); }
@@ -211,29 +204,26 @@ public class ClassFile extends Type.Class.Body {
     }
     private ClassFile(int magic, short minor, short major, ConstantPool cp, short flags,
                       Type.Class thisType, DataInput i, boolean ssa) throws IOException {
-        thisType.super();
+        thisType.super(flags, null);
         if (magic != 0xcafebabe) throw new ClassReadExn("invalid magic: " + Long.toString(0xffffffffL & magic, 16));
         this.minor = minor;
         this.major = major;
-        this.flags = flags;
-        if((flags & ~(PUBLIC|FINAL|SUPER|INTERFACE|ABSTRACT)) != 0)
-            throw new ClassReadExn("invalid flags: " + Integer.toString(flags,16));
         this.thisType = thisType;
         superType = (Type.Class) cp.getKeyByIndex(i.readShort());
         interfaces = new Type.Class[i.readShort()];
         for(int j=0; j<interfaces.length; j++) interfaces[j] = (Type.Class) cp.getKeyByIndex(i.readShort());
         int numFields = i.readShort();
-        for(int j=0; j<numFields; j++) fields.addElement(new FieldGen(this, i, cp));
+        for(int j=0; j<numFields; j++) fields.addElement(new FieldGen(this.getType(), i, cp));
         int numMethods = i.readShort();
         for(int j=0; j<numMethods; j++) methods.addElement(ssa 
                                                            ? new JSSA(this.getType(), i, cp) 
                                                            : new MethodGen(this.getType(), i, cp));
-        attributes = new AttrGen(i, cp);
+        readAttributes(i, cp);
         
         // FEATURE: Support these
         // NOTE: Until we can support them properly we HAVE to delete them,
         //       they'll be incorrect after we rewrite the constant pool, etc
-        attributes.remove("InnerClasses");
+        attrs.remove("InnerClasses");
     }
     
     /** Thrown when class generation fails for a reason not under the control of the user

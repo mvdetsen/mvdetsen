@@ -5,14 +5,12 @@ import java.util.*;
 
 /** A class representing a method in a generated classfile
     @see ClassFile#addMethod */
-public class MethodGen extends Type.Class.Method.Body implements CGConst {
+public class MethodGen extends Type.Class.Method.Body {
     private final static boolean EMIT_NOPS = false;
     
     private static final int NO_CODE = -1;
 
     public final Type.Class.Method method;
-    private final int flags;
-    private final ClassFile.AttrGen attrs;
     private final ClassFile.AttrGen codeAttrs;
     private final Vector exnTable = new Vector();
     private final Hashtable thrownExceptions = new Hashtable();
@@ -30,16 +28,10 @@ public class MethodGen extends Type.Class.Method.Body implements CGConst {
     // Constructors //////////////////////////////////////////////////////////////////////////////
 
     MethodGen(Type.Class.Method method, int flags) {
-        method.super();
-        if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
+        method.super(flags, new ClassFile.AttrGen());
         this.method = method;
-        this.flags = flags;
-        
-        attrs = new ClassFile.AttrGen();
         codeAttrs = new ClassFile.AttrGen();
-        
-        if (((flags & INTERFACE) != 0) || (flags & (ABSTRACT|NATIVE)) != 0) size = capacity = -1;
-        
+        if (!isConcrete()) size = capacity = -1;
         maxLocals = Math.max(method.getNumArgs() + (flags&STATIC)==0 ? 1 : 0, 4);
     }
 
@@ -50,13 +42,10 @@ public class MethodGen extends Type.Class.Method.Body implements CGConst {
         this(flags, name, c.method(name+cp.getUtf8KeyByIndex(in.readShort())), c, in, cp); }
     private MethodGen(short flags, String name, Type.Class.Method m,
                       Type.Class c, DataInput in, ConstantPool cp) throws IOException {
-        m.super();
-        this.flags = flags;
-        if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new ClassFile.ClassReadExn("invalid flags");
+        m.super(flags, new ClassFile.AttrGen(in,cp));
         this.method = m;
-        this.attrs = new ClassFile.AttrGen(in,cp);
         
-        if ((flags & (NATIVE|ABSTRACT))==0)  {
+        if (isConcrete())  {
             byte[] codeAttr = (byte[]) attrs.get("Code");
             if (codeAttr == null) throw new ClassFile.ClassReadExn("code attr expected");
             DataInputStream ci = new DataInputStream(new ByteArrayInputStream(codeAttr));
