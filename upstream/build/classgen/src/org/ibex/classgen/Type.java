@@ -128,6 +128,7 @@ public abstract class Type implements CGConst {
             return a;
         }
 
+        public Type.Class.Body getBody(Context cx) { return cx.resolve(this.getName()); }
         public abstract class Body extends HasAttributes {
             public abstract Type.Class.Method.Body[] methods();
             public abstract Type.Class.Field.Body addField(Type.Class.Field field, int flags);
