@@ -74,7 +74,11 @@ public class JSSA extends MethodGen implements CGConst {
     private int sp = 0;
     
     private Expr push(Expr e) {
-        if(sp == stack.length-1) throw new IllegalStateException("stack overflow");
+        if(sp == stack.length) {
+            for(int i=0;i<stack.length;i++) System.err.println("Stack " + i + ": " + stack[i]);
+            throw new IllegalStateException("stack overflow (" + stack.length + ")");
+        }
+        if(e.getType() == Type.VOID) throw new IllegalArgumentException("can't push a void");
         return stack[sp++] = e;
     }
     private Expr pop() {
