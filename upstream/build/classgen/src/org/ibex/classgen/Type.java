@@ -118,7 +118,7 @@ public abstract class Type implements CGConst {
             return p == -1 ? descriptor.substring(1,descriptor.length()-1) : descriptor.substring(p+1,descriptor.length()-1);
         }
         private static String _initHelper(String s) {
-            if (!s.startsWith("L") || !s.endsWith(";")) s = "L" + s.replace('.', '/') + ";";
+            if (!s.startsWith("L") || !s.endsWith(";")) throw new Error("invalid");
             return s;
         }
         String[] components() {
