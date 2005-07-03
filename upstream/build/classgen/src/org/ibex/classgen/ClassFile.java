@@ -34,6 +34,7 @@ public class ClassFile implements CGConst {
     }
 
     public Type.Class getType() { return thisType; }
+    public int getFlags() { return flags; }
     
     String debugToString() { return debugToString(new StringBuffer(4096)).toString(); }
     StringBuffer debugToString(StringBuffer sb) {
