@@ -73,8 +73,14 @@ public class JSSA extends MethodGen implements CGConst {
     /** JVM stack pointer */
     private int sp = 0;
     
-    private Expr push(Expr e) { return stack[sp++] = e; }
-    private Expr pop()        { return stack[--sp]; }
+    private Expr push(Expr e) {
+        if(sp == stack.length-1) throw new IllegalStateException("stack overflow");
+        return stack[sp++] = e;
+    }
+    private Expr pop() {
+        if(sp == 0) throw new IllegalStateException("stack underflow");
+        return stack[--sp];
+    }
 
 
     // SSA-node classes /////////////////////////////////////////////////////////////////////////////////////////
