@@ -191,20 +191,33 @@ public class JSSA extends MethodGen implements CGConst {
     public class Cast extends Expr {
         final Expr e;
         final Type t;
-        public Cast(Expr e, Type t) { this.e = e; this.t = t; }
+        public Cast(Expr e, Type t) {
+            if(e.getType().isRef() != t.isRef()) throw new IllegalArgumentException("invalid cast");
+            // FEATURE: Check that one is a subclass of the other if it is a ref
+            this.e = e;
+            this.t = t; 
+        }
         public Type getType() { return t; }
     }
 
     public class InstanceOf extends Expr {
         final Expr e;
-        final Type t;
-        public InstanceOf(Expr e, Type t) { this.e = e; this.t = t; }
+        final Type.Ref t;
+        public InstanceOf(Expr e, Type.Ref t) {
+            if(!e.getType().isRef()) throw new IllegalArgumentException("can't do an instanceof check on a non-ref");
+            this.e = e; 
+            this.t = t; 
+        }
         public Type getType() { return Type.BOOLEAN; }
     }
 
     public class Throw extends Op {
         public final Expr e;
-        public Throw(Expr e) { this.e = e; }
+        public Throw(Expr e) {
+            if(!e.getType().isRef()) throw new IllegalArgumentException("can't throw a non ref");
+            // FEATURE: CHeck that it is a subclass of Throwable
+            this.e = e; 
+        }
     }
 
     public class Branch extends Op {
@@ -527,8 +540,8 @@ public class JSSA extends MethodGen implements CGConst {
 
                 // Runtime Type information //////////////////////////////////////////////////////////////////////////////
 
-            case CHECKCAST:         push(new Cast(pop(), (Type)arg)); return null;
-            case INSTANCEOF:        push(new InstanceOf(pop(), (Type)arg)); return null;
+            case CHECKCAST:         push(new Cast(pop(), (Type.Ref)arg)); return null;
+            case INSTANCEOF:        push(new InstanceOf(pop(), (Type.Ref)arg)); return null;
 
             case LDC: case LDC_W: case LDC2_W: push(new Constant(arg)); return null;
 
