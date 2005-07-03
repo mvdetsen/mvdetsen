@@ -435,8 +435,8 @@ public class JSSA extends MethodGen implements CGConst {
             if (o instanceof Long) return Type.LONG;
             if (o instanceof Double) return Type.DOUBLE;
             if (o instanceof Float) return Type.FLOAT;
-            if (o instanceof ConstantPool.Ent) throw new Error("unimplemented");
-            throw new Error("this should not happen");
+            if (o instanceof Integer) return Type.INT;
+            throw new IllegalStateException("unknown constant type");
         }
     }
 
