@@ -15,8 +15,11 @@ public class JSSA extends MethodGen implements CGConst {
         super(c, in, cp);
         local = new Expr[maxLocals];
         stack = new Expr[maxStack];
-        for(int i=0; i<this.method.getNumArgs(); i++)
-            local[i] = new Argument("arg"+i, this.method.getArgType(i));
+        int n=0;
+        if (!isStatic())
+            local[n++] = new Argument("this",method.getDeclaringClass());
+        for(int i=0;i<this.method.getNumArgs(); i++)
+            local[n++] = new Argument("arg"+i, this.method.getArgType(i));
         for(int i=0; i<size(); i++) {
             int    op  = get(i);
             Object arg = getArg(i);
