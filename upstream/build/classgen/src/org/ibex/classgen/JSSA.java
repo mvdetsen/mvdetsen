@@ -20,10 +20,16 @@ public class JSSA extends MethodGen implements CGConst {
         for(int i=0; i<size(); i++) {
             int    op  = get(i);
             Object arg = getArg(i);
-            Object o = addOp(op, arg);
-            if (o != null) {
-                ops[numOps] = o;
-                ofs[numOps++] = i;
+            try {
+                Object o = addOp(op, arg);
+                if (o != null) {
+                    ops[numOps] = o;
+                    ofs[numOps++] = i;
+                }
+            } catch(RuntimeException e) {
+                System.err.println("Had a problem at PC: " + i + " of " + method);
+                e.printStackTrace();
+                throw new IOException("invalid class file");
             }
         }
     }
