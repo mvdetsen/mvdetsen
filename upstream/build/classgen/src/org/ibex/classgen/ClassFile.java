@@ -6,13 +6,25 @@ import java.io.*;
 /** Class generation object representing the whole classfile */
 public class ClassFile extends Type.Class.Body {
     private final Type.Class thisType;
-    private final Type.Class superType;
-    private final Type.Class[] interfaces;
+    final Type.Class superType;
+    final Type.Class[] interfaces;
     private final short minor;
     private final short major;
     
     private final Vector fields = new Vector();
-    public final Vector methods = new Vector();
+    private final Vector methods = new Vector();
+
+    public Type.Class.Method.Body[] methods() {
+        Type.Class.Method.Body[] ret = new Type.Class.Method.Body[methods.size()];
+        methods.copyInto(ret);
+        return ret;
+    }
+
+    public Type.Class.Field.Body[] fields() {
+        Type.Class.Field.Body[] ret = new Type.Class.Field.Body[fields.size()];
+        fields.copyInto(ret);
+        return ret;
+    }
     
     static String flagsToString(int flags, boolean isClass) {
         StringBuffer sb = new StringBuffer(32);
@@ -96,8 +108,8 @@ public class ClassFile extends Type.Class.Body {
         @see FieldGen
         @see CGConst
         */  
-    public final FieldGen addField(String name, Type type, int flags) {
-        FieldGen fg = new FieldGen(getType().field(name, type), flags);
+    public final Type.Class.Field.Body addField(Type.Class.Field field, int flags) {
+        FieldGen fg = new FieldGen(field, flags);
         fields.addElement(fg);
         return fg;
     }

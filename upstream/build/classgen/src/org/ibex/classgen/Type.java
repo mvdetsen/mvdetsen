@@ -97,9 +97,22 @@ public abstract class Type implements CGConst {
         public boolean isClass() { return true; }
         public static Type.Class instance(String className) {
             return (Type.Class)Type.fromDescriptor("L"+className.replace('.', '/')+";"); }
-        //public boolean extendsOrImplements(Type.Class c, Context cx) { }
+        public boolean extendsOrImplements(Type.Class c, Context cx) {
+            if (this==c) return true;
+            if (this==OBJECT) return false;
+            ClassFile cf = cx.resolve(getName());
+            if (cf==null) {
+                System.err.println("warning: could not resolve class " + getName());
+                return false;
+            }
+            if (cf.superType == c) return true;
+            for(int i=0; i<cf.interfaces.length; i++) if (cf.interfaces[i].extendsOrImplements(c,cx)) return true;
+            if (cf.superType == null) return false;
+            return cf.superType.extendsOrImplements(c, cx);
+        }
         String internalForm() { return descriptor.substring(1, descriptor.length()-1); }
         public String debugToString() { return internalForm().replace('/','.'); }
+        public String getName() { return internalForm().replace('/','.'); }
         public String getShortName() {
             int p = descriptor.lastIndexOf('/');
             return p == -1 ? descriptor.substring(1,descriptor.length()-1) : descriptor.substring(p+1,descriptor.length()-1);
@@ -116,6 +129,9 @@ public abstract class Type implements CGConst {
         }
 
         public abstract class Body extends HasAttributes {
+            public abstract Type.Class.Method.Body[] methods();
+            public abstract Type.Class.Field.Body addField(Type.Class.Field field, int flags);
+            public abstract Type.Class.Field.Body[] fields();
             public Body(int flags, ClassFile.AttrGen attrs) {
                 super(flags, attrs);
                 if ((flags & ~(PUBLIC|FINAL|SUPER|INTERFACE|ABSTRACT)) != 0)
@@ -224,6 +240,7 @@ public abstract class Type implements CGConst {
             public abstract class Body extends HasAttributes {
                 public abstract java.util.Hashtable getThrownExceptions();
                 public abstract void debugBodyToString(StringBuffer sb);
+                public Method getMethod() { return Method.this; }
                 public Body(int flags, ClassFile.AttrGen attrs) {
                     super(flags, attrs);
                     if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
