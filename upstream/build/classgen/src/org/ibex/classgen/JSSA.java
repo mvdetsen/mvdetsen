@@ -564,8 +564,12 @@ public class JSSA extends MethodGen implements CGConst {
                     case INVOKESTATIC:    ret = new InvokeStatic(method, args); break;
                     default: throw new Error("should never happen");
                 }
-                if(ret.getType() != Type.VOID) push(ret);
-                return ret;
+                if(ret.getType() != Type.VOID) {
+                    push(ret);
+                    return null;
+                } else {
+                    return ret;
+                }
             }
 
                 // Field Access //////////////////////////////////////////////////////////////////////////////
