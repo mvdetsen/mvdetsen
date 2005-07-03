@@ -82,6 +82,8 @@ public class Type implements CGConst {
         public Type.Class asClass() { return this; }
         public boolean isClass() { return true; }
         public String getShortName() { return toString.substring(toString.lastIndexOf('.')+1); }
+        public String getName() { return toString(); }
+        //public boolean extendsOrImplements(Type.Class c, Context cx) { }
         String internalForm() { return descriptor.substring(1, descriptor.length()-1); }
         private static String _initHelper(String s) {
             if (!s.startsWith("L") || !s.endsWith(";")) s = "L" + s.replace('.', '/') + ";";
@@ -96,6 +98,9 @@ public class Type implements CGConst {
             String[] a = new String[st.countTokens()];
             for(int i=0;st.hasMoreTokens();i++) a[i] = st.nextToken();
             return a;
+        }
+
+        public abstract class Body extends HasFlags {
         }
 
         public Field  field(String name, Type type) { return new Field(name, type); }
@@ -141,14 +146,27 @@ public class Type implements CGConst {
             public String getDescriptor() { return type.getDescriptor(); }
             public Type getType() { return type; }
             public String debugToString() { return getDeclaringClass()+"."+name+"["+type+"]"; }
+            public class Body extends HasFlags {
+                public final int flags;
+                public Body(int flags) { this.flags = flags; }
+                public int getFlags() { return flags; }
+            }
         }
 
         public class Method extends Member {
             final Type[] argTypes;
             public final Type   returnType;
-            public Type getArgType(int i) { return argTypes[i]; }
-            public int  getNumArgs()      { return argTypes.length; }
             public Type getReturnType()   { return returnType; }
+            public int  getNumArgs()      { return argTypes.length; }
+            public Type getArgType(int i) { return argTypes[i]; }
+            public Type[] getArgTypes()   {
+                Type[] ret = new Type[argTypes.length];
+                System.arraycopy(argTypes, 0, ret, 0, ret.length);
+                return ret;
+            }
+
+            public boolean isConstructor() { return getName().equals("<init>"); }
+            public boolean isClassInitializer() { return getName().equals("<clinit>"); }
             public String debugToString() {
                 StringBuffer sb = new StringBuffer();
                 if (name.equals("<clinit>")) sb.append("static ");
@@ -169,6 +187,7 @@ public class Type implements CGConst {
                 this.argTypes = argTypes;
                 this.returnType = returnType;
             }
+            //public Method.Body getBody(Context cx) { }
             public String getDescriptor() {
                 StringBuffer sb = new StringBuffer(argTypes.length*4);
                 sb.append("(");
@@ -177,7 +196,7 @@ public class Type implements CGConst {
                 sb.append(returnType.getDescriptor());
                 return sb.toString();
             }
-            public abstract class Body implements HasFlags {
+            public abstract class Body extends HasFlags {
                 public abstract java.util.Hashtable getThrownExceptions();
                 public abstract void debugBodyToString(StringBuffer sb);
                 public void debugToString(StringBuffer sb, String constructorName) {

@@ -4,7 +4,7 @@ import java.util.*;
 import java.io.*;
 
 /** Class generation object representing the whole classfile */
-public class ClassFile implements CGConst {
+public class ClassFile extends Type.Class.Body {
     private final Type.Class thisType;
     private final Type.Class superType;
     private final Type.Class[] interfaces;
@@ -64,9 +64,10 @@ public class ClassFile implements CGConst {
 
     public ClassFile(Type.Class thisType, Type.Class superType, int flags) { this(thisType, superType, flags, null); }
     public ClassFile(Type.Class thisType, Type.Class superType, int flags, Type.Class[] interfaces) {
+        thisType.super();
+        this.thisType = thisType;
         if((flags & ~(PUBLIC|FINAL|SUPER|INTERFACE|ABSTRACT)) != 0)
             throw new IllegalArgumentException("invalid flags");
-        this.thisType = thisType;
         this.superType = superType;
         this.interfaces = interfaces;
         this.flags = flags;
@@ -202,15 +203,22 @@ public class ClassFile implements CGConst {
 
     public ClassFile(DataInput i) throws IOException { this(i, false); }
     public ClassFile(DataInput i, boolean ssa) throws IOException {
-        int magic = i.readInt();
+        this(i.readInt(), i.readShort(), i.readShort(), new ConstantPool(i), i.readShort(), i, ssa);
+    }
+    private ClassFile(int magic, short minor, short major, ConstantPool cp,
+                      short flags, DataInput i, boolean ssa) throws IOException {
+        this(magic, minor, major, cp, flags, (Type.Class)cp.getKeyByIndex(i.readShort()), i, ssa);
+    }
+    private ClassFile(int magic, short minor, short major, ConstantPool cp, short flags,
+                      Type.Class thisType, DataInput i, boolean ssa) throws IOException {
+        thisType.super();
         if (magic != 0xcafebabe) throw new ClassReadExn("invalid magic: " + Long.toString(0xffffffffL & magic, 16));
-        minor = i.readShort();
-        major = i.readShort();
-        ConstantPool cp = new ConstantPool(i);
-        flags = i.readShort();
+        this.minor = minor;
+        this.major = major;
+        this.flags = flags;
         if((flags & ~(PUBLIC|FINAL|SUPER|INTERFACE|ABSTRACT)) != 0)
             throw new ClassReadExn("invalid flags: " + Integer.toString(flags,16));
-        thisType = (Type.Class) cp.getKeyByIndex(i.readShort());
+        this.thisType = thisType;
         superType = (Type.Class) cp.getKeyByIndex(i.readShort());
         interfaces = new Type.Class[i.readShort()];
         for(int j=0; j<interfaces.length; j++) interfaces[j] = (Type.Class) cp.getKeyByIndex(i.readShort());
