@@ -40,8 +40,6 @@ public class Type implements CGConst {
     public       String  toString() { return toString; }
     public       String  debugToString() { return toString; }
     public final String  getDescriptor() { return descriptor; }
-    public       int     hashCode() { return descriptor.hashCode(); }
-    public       boolean equals(java.lang.Object o) { return this==o; }
 
     public Type.Array  makeArray() { return (Type.Array)instance("["+descriptor); }
     public Type.Array  makeArray(int i) { return i==0 ? (Type.Array)this : makeArray().makeArray(i-1); }
@@ -133,14 +131,6 @@ public class Type implements CGConst {
             private Member(String name) { this.name = name; }
             public Type.Class getDeclaringClass() { return Type.Class.this; }
             public abstract String getDescriptor();
-            public boolean equals(Object o_) {
-                if(!(o_ instanceof Member)) return false;
-                Member o = (Member) o_;
-                return o.getDeclaringClass().equals(getDeclaringClass()) &&
-                    o.name.equals(name) &&
-                    o.getDescriptor().equals(getDescriptor());
-            }
-            public int hashCode() { return getDeclaringClass().hashCode() ^ name.hashCode() ^ getDescriptor().hashCode(); }
             public String toString() { return debugToString(); }
             public abstract String debugToString();
         }
