@@ -29,11 +29,14 @@ public abstract class Type implements CGConst {
     /** A zero element Type[] array (can be passed as the "args" param when a method takes no arguments */
     public static final Type[] NO_ARGS = new Type[0];
     
-    /** guarantee: there will only be one instance of Type for a given descriptor ==> equals() and == are interchangeable */
-    public static Type instance(String d) {
+    /** 
+     *  A "descriptor" is the classfile-mangled text representation of a type (see JLS section 4.3)
+     *  guarantee: there will only be one instance of Type for a given descriptor ==> equals() and == are interchangeable
+     */
+    public static Type fromDescriptor(String d) {
         Type ret = (Type)instances.get(d);
         if (ret != null) return ret;
-        if (d.startsWith("[")) return new Type.Array(instance(d.substring(1)));
+        if (d.startsWith("[")) return new Type.Array(Type.fromDescriptor(d.substring(1)));
         return new Type.Class(d);
     }
 
@@ -42,7 +45,7 @@ public abstract class Type implements CGConst {
     
     public final String  getDescriptor() { return descriptor; }
 
-    public Type.Array  makeArray() { return (Type.Array)instance("["+descriptor); }
+    public Type.Array  makeArray() { return (Type.Array)Type.fromDescriptor("["+descriptor); }
     public Type.Array  makeArray(int i) { return i==0 ? (Type.Array)this : makeArray().makeArray(i-1); }
 
     public Type.Ref    asRef()       { throw new RuntimeException("attempted to use "+this+" as a Type.Ref, which it is not"); }
@@ -85,7 +88,7 @@ public abstract class Type implements CGConst {
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
         public String debugToString() { return base.debugToString() + "[]"; }
-        public Type getElementType() { return Type.instance(getDescriptor().substring(0, getDescriptor().length()-1)); }
+        public Type getElementType() { return Type.fromDescriptor(getDescriptor().substring(0, getDescriptor().length()-1)); }
     }
 
     public static class Class extends Type.Ref {
@@ -93,7 +96,7 @@ public abstract class Type implements CGConst {
         public Type.Class asClass() { return this; }
         public boolean isClass() { return true; }
         public static Type.Class instance(String className) {
-            return (Type.Class)Type.instance("L"+className.replace('.', '/')+";"); }
+            return (Type.Class)Type.fromDescriptor("L"+className.replace('.', '/')+";"); }
         //public boolean extendsOrImplements(Type.Class c, Context cx) { }
         String internalForm() { return descriptor.substring(1, descriptor.length()-1); }
         public String debugToString() { return internalForm().replace('/','.'); }
@@ -138,12 +141,12 @@ public abstract class Type implements CGConst {
                     p = argsDesc.indexOf(';');
                     if(p == -1) throw new IllegalArgumentException("invalid method type descriptor");
                 }
-                argsBuf[i] = Type.instance(argsDesc.substring(0,p+1));
+                argsBuf[i] = Type.fromDescriptor(argsDesc.substring(0,p+1));
                 argsDesc = argsDesc.substring(p+1);
             }
             Type args[] = new Type[i];
             System.arraycopy(argsBuf,0,args,0,i);
-            return method(name, Type.instance(retDesc), args);
+            return method(name, Type.fromDescriptor(retDesc), args);
         }
 
         public abstract class Member {

@@ -26,7 +26,7 @@ public class FieldGen implements CGConst {
         if((flags & ~VALID_FIELD_FLAGS) != 0)
             throw new ClassFile.ClassReadExn("invalid flags");        
         name = cp.getUtf8KeyByIndex(in.readShort());
-        type = Type.instance(cp.getUtf8KeyByIndex(in.readShort()));
+        type = Type.fromDescriptor(cp.getUtf8KeyByIndex(in.readShort()));
         attrs = new ClassFile.AttrGen(in,cp);
     }
 
