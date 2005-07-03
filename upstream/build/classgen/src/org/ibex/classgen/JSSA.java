@@ -79,6 +79,10 @@ public class JSSA extends MethodGen implements CGConst {
 
     // SSA-node classes /////////////////////////////////////////////////////////////////////////////////////////
 
+    public final Expr VOID_EXPR = new Expr() {
+        public Type getType() { return Type.VOID; }
+    };
+    
     /** an purely imperative operation which does not generate data */
     public abstract class Op {
         //public abstract Op[] predecessors();  // not implemented yet
@@ -240,9 +244,9 @@ public class JSSA extends MethodGen implements CGConst {
 
     public class Return extends Op {
         final Expr e;
-        public Return() { this(null); }
+        public Return() { this(VOID_EXPR); }
         public Return(Expr e) { this.e = e; }
-        public String toString() { return e==null?"return":("return "+e.toString()); }
+        public String toString() { return e.getType() == Type.VOID ? "return" : ("return "+e.toString()); }
     }
 
     /** GETFIELD and GETSTATIC */
