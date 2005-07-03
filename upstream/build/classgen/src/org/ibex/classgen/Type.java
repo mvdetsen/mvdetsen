@@ -205,6 +205,7 @@ public abstract class Type implements CGConst {
             }
             public boolean isConstructor() { return getName().equals("<init>"); }
             public boolean isClassInitializer() { return getName().equals("<clinit>"); }
+            
             public String toString() {
                 StringBuffer sb = new StringBuffer();
                 if (name.equals("<clinit>")) sb.append("static ");
@@ -242,6 +243,7 @@ public abstract class Type implements CGConst {
                     super(flags, attrs);
                     if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
                 }
+                public boolean isConcrete() { return !isAbstract() && !isNative() /*FIXME: !inAnInterface*/; }
                 public void toString(StringBuffer sb, String constructorName) {
                     int flags = getFlags();
                     sb.append("  ").append(ClassFile.flagsToString(flags,false));
