@@ -308,6 +308,7 @@ public class JSSA extends MethodGen implements CGConst {
         public final Type.Class t;
         public Type getType() { return t; }
         public New(Type.Class t) { this.t = t; }
+        public String toString() { return "new " + t + "(...)"; }
     }
     
     public class NewArray extends Expr {
@@ -403,20 +404,17 @@ public class JSSA extends MethodGen implements CGConst {
     public class InvokeStatic    extends Invoke  { public InvokeStatic(Type.Class.Method m, Expr[] a) { super(m,a); } }
     public class InvokeSpecial   extends InvokeVirtual {
         public InvokeSpecial(Type.Class.Method m, Expr[] a, Expr e) { super(m,a,e); }
-        public String toString() {
-            StringBuffer sb = new StringBuffer();
-            sb.append(method.name.equals("<init>") ? "super" : method.name);
-            args(sb);
-            return sb.toString();
-        }
+        public String toString() { return toString(method.name.equals("<init>") ? method.getDeclaringClass().getName() : method.name); }
     }
     public class InvokeInterface extends InvokeVirtual{public InvokeInterface(Type.Class.Method m, Expr[] a, Expr e){super(m,a,e);}}
     public class InvokeVirtual   extends Invoke  {
         public final Expr instance;
         public InvokeVirtual(Type.Class.Method m, Expr[] a, Expr e) { super(m, a); instance = e; }
-        public String toString() {
+        public String toString() { return toString(method.name); }
+        protected String toString(String name) {
             StringBuffer sb = new StringBuffer();
-            sb.append(method.name);
+            sb.append(instance+".");
+            sb.append(name);
             args(sb);
             return sb.toString();
         }
@@ -426,7 +424,7 @@ public class JSSA extends MethodGen implements CGConst {
         private final Object o;
         public Constant(int i) { this(new Integer(i)); }
         public Constant(Object o) { this.o = o; }
-        public String toString() { return o.toString(); }
+        public String toString() { return o instanceof String ? "\"" + o + "\"" : o.toString(); }
         public Type getType() {
             if (o instanceof Byte) return Type.BYTE;
             if (o instanceof Short) return Type.SHORT;
@@ -436,6 +434,7 @@ public class JSSA extends MethodGen implements CGConst {
             if (o instanceof Double) return Type.DOUBLE;
             if (o instanceof Float) return Type.FLOAT;
             if (o instanceof Integer) return Type.INT;
+            if (o instanceof String) return Type.STRING;
             throw new IllegalStateException("unknown constant type");
         }
     }
