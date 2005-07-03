@@ -483,10 +483,10 @@ public class JSSA extends MethodGen implements CGConst {
             case ISTORE_1: case LSTORE_1: case FSTORE_1: case DSTORE_1: case ASTORE_1: local[1]  = pop(); return null;
             case ASTORE_2: case DSTORE_2: case FSTORE_2: case LSTORE_2: case ISTORE_2: local[2]  = pop(); return null;
             case ISTORE_3: case LSTORE_3: case FSTORE_3: case DSTORE_3: case ASTORE_3: local[3]  = pop(); return null;
-            case POP:      stack[--sp] = null;                    
-            case POP2:     stack[--sp] = null; stack[--sp] = null;   /** fixme: pops a WORD, not an item */
-            case DUP:      stack[sp] = stack[sp-1]; sp++;
-            case DUP2:     stack[sp] = stack[sp-2]; stack[sp+1] = stack[sp-1]; sp+=2;
+            case POP:      pop(); return null;
+            case POP2:     pop(); pop(); return null;
+            case DUP:      push(stack[sp-1]); return null;
+            case DUP2:     push(stack[sp-2]); push(stack[sp-2]); return null;
 
                 // Conversions //////////////////////////////////////////////////////////////////////////////
 
