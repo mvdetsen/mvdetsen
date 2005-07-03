@@ -3,7 +3,7 @@ package org.ibex.classgen;
 import java.util.StringTokenizer;
 import java.util.Hashtable;
 
-public class Type implements CGConst {
+public abstract class Type implements CGConst {
 
     private static Hashtable instances = new Hashtable();  // this has to appear at the top of the file
 
