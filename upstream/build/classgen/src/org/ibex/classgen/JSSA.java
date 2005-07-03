@@ -13,6 +13,8 @@ public class JSSA extends MethodGen implements CGConst {
     
     public JSSA(Type.Class c, DataInput in, ConstantPool cp) throws IOException {
         super(c, in, cp);
+        local = new Expr[maxLocals];
+        stack = new Expr[maxStack];
         for(int i=0; i<this.method.getNumArgs(); i++)
             local[i] = new Argument("arg"+i, this.method.getArgType(i));
         for(int i=0; i<size(); i++) {
@@ -63,10 +65,10 @@ public class JSSA extends MethodGen implements CGConst {
     // Instance Data; used ONLY during constructor; then thrown away /////////////////////////////////////////////////
 
     /** this models the JVM locals; it is only used for unwinding stack-ops into an SSA-tree, then thrown away */
-    private Expr[] local = new Expr[6];
+    private final Expr[] local;
     
     /** this models the JVM stack; it is only used for unwinding stack-ops into an SSA-tree, then thrown away */
-    private Expr[] stack = new Expr[65535];
+    private final Expr[] stack;
 
     /** JVM stack pointer */
     private int sp = 0;

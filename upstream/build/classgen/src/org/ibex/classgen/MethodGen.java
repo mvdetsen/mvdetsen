@@ -15,8 +15,8 @@ public class MethodGen extends Type.Class.Method.Body {
     private final Vector exnTable = new Vector();
     private final Hashtable thrownExceptions = new Hashtable();
     
-    private int maxStack = 16;
-    private int maxLocals;
+    int maxStack = 16;
+    int maxLocals;
     
     private int size;
     private int capacity;
