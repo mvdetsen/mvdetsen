@@ -6,9 +6,9 @@ import java.io.*;
     @see ClassFile#addField */
 public class FieldGen extends Type.Class.Field.Body {
 
-    StringBuffer debugToString(StringBuffer sb) {
+    StringBuffer toString(StringBuffer sb) {
         sb.append(ClassFile.flagsToString(flags, false));
-        sb.append(getField().getType().debugToString());
+        sb.append(getField().getType().toString());
         sb.append(" ");
         sb.append(getField().getName());
         if (attrs.contains("ConstantValue")) sb.append(" = \"").append(attrs.get("ConstantValue")).append("\"");

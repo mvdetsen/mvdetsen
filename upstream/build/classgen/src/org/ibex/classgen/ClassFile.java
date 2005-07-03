@@ -45,14 +45,14 @@ public class ClassFile extends Type.Class.Body {
     public Type.Class getType() { return thisType; }
     public int getFlags() { return flags; }
     
-    String debugToString() { return debugToString(new StringBuffer(4096)).toString(); }
-    StringBuffer debugToString(StringBuffer sb) {
+    public String toString() { return toString(new StringBuffer(4096)).toString(); }
+    StringBuffer toString(StringBuffer sb) {
         sb.append(flagsToString(flags,true));
         sb.append((flags & INTERFACE) != 0 ? "interface " : "class ");
-        sb.append(thisType.debugToString());
-        if (superType != null) sb.append(" extends " + superType.debugToString());
+        sb.append(thisType.toString());
+        if (superType != null) sb.append(" extends " + superType.toString());
         if (interfaces != null && interfaces.length > 0) sb.append(" implements");
-        for(int i=0; i<interfaces.length; i++) sb.append((i==0?" ":", ")+interfaces[i].debugToString());
+        for(int i=0; i<interfaces.length; i++) sb.append((i==0?" ":", ")+interfaces[i].toString());
         sb.append(" {");
         sb.append(" // v"+major+"."+minor);
         ConstantPool.Utf8Key sourceFile = (ConstantPool.Utf8Key) attrs.get("SourceFile");
@@ -60,11 +60,11 @@ public class ClassFile extends Type.Class.Body {
         sb.append("\n");
         for(int i=0; i<fields.size(); i++) {
             sb.append("  ");
-            ((FieldGen)fields.elementAt(i)).debugToString(sb);
+            ((FieldGen)fields.elementAt(i)).toString(sb);
             sb.append("\n");
         }
         for(int i=0; i<methods.size(); i++) {
-            ((MethodGen)methods.elementAt(i)).debugToString(sb,thisType.getShortName());
+            ((MethodGen)methods.elementAt(i)).toString(sb,thisType.getShortName());
             sb.append("\n");
         }
         sb.append("}");
@@ -312,10 +312,10 @@ public class ClassFile extends Type.Class.Body {
         }
         else if (args.length==1) {
             if (args[0].endsWith(".class")) {
-                System.out.println(new ClassFile(new DataInputStream(new FileInputStream(args[0]))).debugToString());
+                System.out.println(new ClassFile(new DataInputStream(new FileInputStream(args[0]))).toString());
             } else {
                 InputStream is = Class.forName(args[0]).getClassLoader().getResourceAsStream(args[0].replace('.', '/')+".class");
-                System.out.println(new ClassFile(new DataInputStream(is)).debugToString());
+                System.out.println(new ClassFile(new DataInputStream(is)).toString());
             }
         } else {
             /*

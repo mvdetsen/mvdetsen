@@ -526,6 +526,6 @@ public class JSSA extends MethodGen implements CGConst {
 
     public static void main(String[] args) throws Exception {
         InputStream is = Class.forName(args[0]).getClassLoader().getResourceAsStream(args[0].replace('.', '/')+".class");
-        System.out.println(new ClassFile(new DataInputStream(is), true).debugToString());
+        System.out.println(new ClassFile(new DataInputStream(is), true).toString());
     }
 }

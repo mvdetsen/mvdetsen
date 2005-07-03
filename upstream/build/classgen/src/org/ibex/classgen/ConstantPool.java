@@ -23,7 +23,6 @@ class ConstantPool implements CGConst {
         Object key;
         Ent(int tag) { this.tag = tag; }
         void dump(DataOutput o) throws IOException { o.writeByte(tag); }
-        String debugToString() { return toString(); } // so we can remove this method when not debugging
         abstract Object _key();
         final Object key() { return key == null ? (key = _key()) : key; }
         int slots() { return 1; } // number of slots this ent takes up
@@ -41,7 +40,7 @@ class ConstantPool implements CGConst {
         String s;
         Utf8Ent() { super(CONSTANT_UTF8); }
         Utf8Ent(String s) { this();  this.s = s; }
-        String debugToString() { return s; }
+        public String toString() { return s; }
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeUTF(s); }
         Object _key() { return new Utf8Key(s); }
     }
@@ -88,7 +87,7 @@ class ConstantPool implements CGConst {
         Type.Class getTypeClass() { return  (Type.Class) key(); }
         Object _key() { return Type.Class.instance(utf8.s); }
         void unref() { utf8.unref(); super.unref(); }
-        String debugToString() { return "[Class: " + utf8.s + "]"; }
+        public String toString() { return "[Class: " + utf8.s + "]"; }
     }
     
     class NameAndTypeEnt extends Ent {
@@ -196,7 +195,7 @@ class ConstantPool implements CGConst {
     
     String getUtf8KeyByIndex(int index) {
         Ent e = getByIndex(index);
-        if(!(e instanceof Utf8Ent)) throw new IllegalArgumentException("that isn't a utf8 (" + e.debugToString() + ")");
+        if(!(e instanceof Utf8Ent)) throw new IllegalArgumentException("that isn't a utf8 (" + e.toString() + ")");
         return ((Utf8Ent)e).s;
     }
     
@@ -309,7 +308,7 @@ class ConstantPool implements CGConst {
         Sort.sort(ents, compareFunc);
         o.writeShort(usedSlots);
         for(int i=0;i<ents.length;i++) {
-            //System.err.println("" + ents[i].n + ": " + ents[i].debugToString());
+            //System.err.println("" + ents[i].n + ": " + ents[i].toString());
             ents[i].dump(o);
         }
     }

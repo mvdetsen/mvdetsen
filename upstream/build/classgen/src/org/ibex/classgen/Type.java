@@ -40,9 +40,6 @@ public abstract class Type implements CGConst {
         return new Type.Class(d);
     }
 
-    public final String  toString() { return super.toString(); }
-    public abstract String debugToString();
-    
     public final String  getDescriptor() { return descriptor; }
 
     public Type.Array  makeArray() { return (Type.Array)Type.fromDescriptor("["+descriptor); }
@@ -71,13 +68,13 @@ public abstract class Type implements CGConst {
             super(descriptor);
             this.humanReadable = humanReadable;
         }
-        public String debugToString() { return humanReadable; }
+        public String toString() { return humanReadable; }
         public boolean     isPrimitive() { return true; }
     }
     
     public abstract static class Ref extends Type {
         protected Ref(String descriptor) { super(descriptor); }
-        public abstract String debugToString();
+        public abstract String toString();
         public    Type.Ref asRef() { return this; }
         public    boolean  isRef() { return true; }
     }
@@ -87,7 +84,7 @@ public abstract class Type implements CGConst {
         protected Array(Type t) { super("[" + t.getDescriptor()); base = t; }
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
-        public String debugToString() { return base.debugToString() + "[]"; }
+        public String toString() { return base.toString() + "[]"; }
         public Type getElementType() { return Type.fromDescriptor(getDescriptor().substring(0, getDescriptor().length()-1)); }
     }
 
@@ -111,7 +108,7 @@ public abstract class Type implements CGConst {
             return cf.superType.extendsOrImplements(c, cx);
         }
         String internalForm() { return descriptor.substring(1, descriptor.length()-1); }
-        public String debugToString() { return internalForm().replace('/','.'); }
+        public String toString() { return internalForm().replace('/','.'); }
         public String getName() { return internalForm().replace('/','.'); }
         public String getShortName() {
             int p = descriptor.lastIndexOf('/');
@@ -177,7 +174,7 @@ public abstract class Type implements CGConst {
             public Type.Class getDeclaringClass() { return Type.Class.this; }
             public String getName() { return name; }
             public abstract String getTypeDescriptor();
-            public abstract String debugToString();
+            public abstract String toString();
         }
     
         public class Field extends Member {
@@ -185,7 +182,7 @@ public abstract class Type implements CGConst {
             private Field(String name, Type t) { super(name); this.type = t; }
             public String getTypeDescriptor() { return type.getDescriptor(); }
             public Type getType() { return type; }
-            public String debugToString() { return getDeclaringClass().debugToString()+"."+name+"["+type.debugToString()+"]"; }
+            public String toString() { return getDeclaringClass().toString()+"."+name+"["+type.toString()+"]"; }
             public class Body extends HasAttributes {
                 public Field getField() { return Field.this; }
                 public Body(int flags, ClassFile.AttrGen attrs) {
@@ -208,17 +205,17 @@ public abstract class Type implements CGConst {
             }
             public boolean isConstructor() { return getName().equals("<init>"); }
             public boolean isClassInitializer() { return getName().equals("<clinit>"); }
-            public String debugToString() {
+            public String toString() {
                 StringBuffer sb = new StringBuffer();
                 if (name.equals("<clinit>")) sb.append("static ");
                 else {
                     if (name.equals("<init>"))
                         sb.append(Class.this.getShortName());
                     else
-                        sb.append(returnType.debugToString()).append(".").append(name);
+                        sb.append(returnType.toString()).append(".").append(name);
                     sb.append("(");
                     for(int i=0; i<argTypes.length; i++)
-                        sb.append((i==0?"":", ")+argTypes[i].debugToString());
+                        sb.append((i==0?"":", ")+argTypes[i].toString());
                     sb.append(") ");
                 }
                 return sb.toString();
@@ -245,15 +242,15 @@ public abstract class Type implements CGConst {
                     super(flags, attrs);
                     if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
                 }
-                public void debugToString(StringBuffer sb, String constructorName) {
+                public void toString(StringBuffer sb, String constructorName) {
                     int flags = getFlags();
                     sb.append("  ").append(ClassFile.flagsToString(flags,false));
-                    sb.append(Method.this.debugToString());
+                    sb.append(Method.this.toString());
                     java.util.Hashtable thrownExceptions = getThrownExceptions();
                     if (thrownExceptions.size() > 0) {
                         sb.append("throws");
                         for(java.util.Enumeration e = thrownExceptions.keys();e.hasMoreElements();)
-                            sb.append(" ").append(((Type.Class)e.nextElement()).debugToString()).append(",");
+                            sb.append(" ").append(((Type.Class)e.nextElement()).toString()).append(",");
                         sb.setLength(sb.length()-1);
                         sb.append(" ");
                     }
