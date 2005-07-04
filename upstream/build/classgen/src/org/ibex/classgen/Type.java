@@ -18,6 +18,7 @@ public abstract class Type implements CGConst {
     public static final Type BYTE = new Primitive("B", "byte");
     public static final Type CHAR = new Primitive("C", "char");
     public static final Type SHORT = new Primitive("S", "short");
+    public static final Type NULL = new Null();
     
     public static final Type.Class OBJECT = Type.Class.instance("java.lang.Object");
     public static final Type.Class STRING = Type.Class.instance("java.lang.String");
@@ -53,6 +54,15 @@ public abstract class Type implements CGConst {
     public boolean     isClass()     { return false; }
     public boolean     isArray()     { return false; }
 
+    public static Type unify(Type t1, Type t2) {
+        if(t1 == Type.NULL) return t2;
+        if(t2 == Type.NULL) return t1;
+        if(t1 == t2) return t1;
+        // FIXME: This needs to do a lot more (subclasses, etc)
+        // it probably should be in Context.java
+        return null;
+    }
+    
     // Protected/Private //////////////////////////////////////////////////////////////////////////////
 
     protected final String descriptor;
@@ -60,6 +70,10 @@ public abstract class Type implements CGConst {
     protected Type(String descriptor) {
         this.descriptor = descriptor;
         instances.put(descriptor, this);
+    }
+    
+    public static class Null extends Type {
+        protected Null() { super(""); } // not really correct....
     }
 
     public static class Primitive extends Type {

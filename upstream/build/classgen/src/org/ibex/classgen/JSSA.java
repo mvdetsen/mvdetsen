@@ -321,7 +321,11 @@ public class JSSA extends MethodGen implements CGConst {
     public class Return extends Op {
         final Expr e;
         public Return() { this(VOID_EXPR); }
-        public Return(Expr e) { this.e = e; }
+        public Return(Expr e) {
+            this.e = e; 
+            if(Type.unify(method.getReturnType(),e.getType()) != method.getReturnType())
+               throw new IllegalArgumentException("type mismatch");
+        }
         public String toString() { return e.getType() == Type.VOID ? "return" : ("return "+e.toString()); }
     }
 
@@ -425,8 +429,9 @@ public class JSSA extends MethodGen implements CGConst {
         private final Object o;
         public Constant(int i) { this(new Integer(i)); }
         public Constant(Object o) { this.o = o; }
-        public String _toString() { return o instanceof String ? "\"" + o + "\"" : o.toString(); }
+        public String _toString() { return o == null ? "null" : o instanceof String ? "\"" + o + "\"" : o.toString(); }
         public Type getType() {
+            if (o == null) return Type.NULL;
             if (o instanceof Byte) return Type.BYTE;
             if (o instanceof Short) return Type.SHORT;
             if (o instanceof Character) return Type.CHAR;
