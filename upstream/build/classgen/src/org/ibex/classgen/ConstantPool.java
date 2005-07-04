@@ -85,7 +85,9 @@ class ConstantPool implements CGConst {
         ClassEnt(String s) { this(); this.utf8 = (Utf8Ent) addUtf8(s); }
         void dump(DataOutput o) throws IOException { super.dump(o); o.writeShort(utf8.n); }
         Type.Class getTypeClass() { return  (Type.Class) key(); }
-        Object _key() { return Type.Class.instance(utf8.s); }
+        Object _key() {
+            return Type.fromDescriptor(utf8.s.startsWith("[") ? utf8.s : "L" + utf8.s + ";"); 
+        }
         void unref() { utf8.unref(); super.unref(); }
         public String toString() { return "[Class: " + utf8.s + "]"; }
     }

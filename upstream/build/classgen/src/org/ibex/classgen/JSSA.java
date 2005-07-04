@@ -304,6 +304,18 @@ public class JSSA extends MethodGen implements CGConst {
         public NewArray(Type.Array t, Expr[] dims) { this.t = t; this.dims = dims; }
         public NewArray(Type.Array t, Expr dim) { this(t,new Expr[]{dim}); }
         public Type getType() { return t; }
+        public String _toString() {
+            Type base = t;
+            int totalDims = 0;
+            while(base.isArray()) {
+                totalDims++;
+                base = base.asArray().getElementType(); 
+            }
+            StringBuffer sb = new StringBuffer("new " + base);
+            for(int i=0;i<totalDims;i++)
+                sb.append("[" + (i < dims.length ? dims[i].toString() : "") + "]");
+            return sb.toString();
+        }
     }
     
     public class Return extends Op {
@@ -349,13 +361,15 @@ public class JSSA extends MethodGen implements CGConst {
 
     public class ArrayPut extends Op {
         final Expr e, i, v;
-        public ArrayPut(Expr e, Expr i, Expr v) { this.e = e; this.i = i; this.v = v; }
+        public ArrayPut(Expr v, Expr i, Expr e) { this.e = e; this.i = i; this.v = v; }
+        public String toString() { return e + "[" + i + "] := " + v; }
     }
 
     public class ArrayGet extends Expr {
         final Expr e, i;
-        public ArrayGet(Expr e, Expr i) { this.e = e; this.i = i; }
+        public ArrayGet(Expr i, Expr e) { this.e = e; this.i = i; }
         public Type getType() { return e.getType().asArray().getElementType(); }
+        public String _toString() { return e + "[" + i + "]"; }
     }
 
     public class ArrayLength extends Expr {

@@ -85,7 +85,7 @@ public abstract class Type implements CGConst {
         public Type.Array asArray() { return this; }
         public boolean isArray() { return true; }
         public String toString() { return base.toString() + "[]"; }
-        public Type getElementType() { return Type.fromDescriptor(getDescriptor().substring(0, getDescriptor().length()-1)); }
+        public Type getElementType() { return base; }
     }
 
     public static class Class extends Type.Ref {
@@ -115,7 +115,7 @@ public abstract class Type implements CGConst {
             return p == -1 ? descriptor.substring(1,descriptor.length()-1) : descriptor.substring(p+1,descriptor.length()-1);
         }
         private static String _initHelper(String s) {
-            if (!s.startsWith("L") || !s.endsWith(";")) throw new Error("invalid");
+            if (!s.startsWith("L") || !s.endsWith(";")) throw new Error("invalid: " + s);
             return s;
         }
         String[] components() {
