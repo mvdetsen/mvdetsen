@@ -228,7 +228,7 @@ public abstract class Type implements CGConst {
                     if (name.equals("<init>"))
                         sb.append(Class.this.getShortName());
                     else
-                        sb.append(returnType.toString()).append(".").append(name);
+                        sb.append(returnType.toString()).append(" ").append(name);
                     sb.append("(");
                     for(int i=0; i<argTypes.length; i++)
                         sb.append((i==0?"":", ")+argTypes[i].toString());
