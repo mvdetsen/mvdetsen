@@ -687,7 +687,7 @@ public class JSSA extends MethodGen implements CGConst {
         else prefix = "o";
         s = prefix + (nextVar++);
         bindingMap.put(e,s);
-        return "(" + s + ":= " + e._toString() + ")";
+        return "(" + s + " = " + e._toString() + ")";
     }
     
     public static void main(String[] args) throws Exception {
