@@ -94,6 +94,11 @@ public class JSSA extends MethodGen implements CGConst {
         if(sp == 0) throw new IllegalStateException("stack underflow");
         return stack[--sp];
     }
+    
+    private Op seqPush(Expr e) {
+        push(e);
+        return new Seq(e);
+    }
 
 
     // SSA-node classes /////////////////////////////////////////////////////////////////////////////////////////
@@ -114,7 +119,16 @@ public class JSSA extends MethodGen implements CGConst {
             return name;
         }
     }
-
+    
+    /** A sequence point. expr is evaluated for side effects at this point, this does not generate data 
+        Expressions that haven't been evaluated with Seq are evaluated when they are first encountered
+      */
+    public class Seq extends Op {
+        private final Expr expr;
+        public String toString() { return expr.toString(); }
+        public Seq(Expr expr) { this.expr = expr; }
+    }
+    
     /** an operation which generates data */
     public abstract class Expr extends Op {
         //public abstract Expr[] contributors();  // not implemented yet
@@ -546,9 +560,11 @@ public class JSSA extends MethodGen implements CGConst {
                 // Array manipulations //////////////////////////////////////////////////////////////////////////////
 
             case IALOAD:  case LALOAD:  case FALOAD:  case DALOAD:  case AALOAD:
-            case BALOAD:  case CALOAD:  case SALOAD:                                  push(new ArrayGet(pop(), pop())); return null;
+            case BALOAD:  case CALOAD:  case SALOAD:
+                return seqPush(new ArrayGet(pop(), pop()));
             case IASTORE: case LASTORE: case FASTORE: case DASTORE: case AASTORE:
-            case BASTORE: case CASTORE: case SASTORE:                                 return new ArrayPut(pop(), pop(), pop());
+            case BASTORE: case CASTORE: case SASTORE:
+                return new ArrayPut(pop(), pop(), pop());
 
                 // Invocation //////////////////////////////////////////////////////////////////////////////
 
@@ -564,19 +580,15 @@ public class JSSA extends MethodGen implements CGConst {
                     case INVOKESTATIC:    ret = new InvokeStatic(method, args); break;
                     default: throw new Error("should never happen");
                 }
-                if(ret.getType() != Type.VOID) {
-                    push(ret);
-                    return null;
-                } else {
-                    return ret;
-                }
+                if(ret.getType() != Type.VOID) push(ret);
+                return new Seq(ret);
             }
 
                 // Field Access //////////////////////////////////////////////////////////////////////////////
 
-            case GETSTATIC:         push(new Get((Type.Class.Field)arg, null)); return null;
+            case GETSTATIC:         return seqPush(new Get((Type.Class.Field)arg, null));
             case PUTSTATIC:         return new Put((Type.Class.Field)arg, pop(), null);
-            case GETFIELD:          push(new Get((Type.Class.Field)arg, pop())); return null;
+            case GETFIELD:          return seqPush(new Get((Type.Class.Field)arg, pop()));
             case PUTFIELD:          return new Put((Type.Class.Field)arg, pop(), pop());
 
                 // Allocation //////////////////////////////////////////////////////////////////////////////
@@ -595,22 +607,20 @@ public class JSSA extends MethodGen implements CGConst {
                     case 11: base = Type.LONG; break;
                     default: throw new IllegalStateException("invalid array type");
                 }
-                push(new NewArray(base.makeArray(),pop()));
-                return null;
+                return seqPush(new NewArray(base.makeArray(),pop()));
             }
             case ANEWARRAY:         push(new NewArray(((Type.Ref)arg).makeArray(), pop())); return null;
             case MULTIANEWARRAY: {
                 MethodGen.MultiANewArray mana = (MethodGen.MultiANewArray) arg;
                 Expr[] dims = new Expr[mana.dims];
                 for(int i=0;i<dims.length;i++) dims[i] = pop();
-                push(new NewArray(mana.type, dims));
-                return null;
+                return seqPush(new NewArray(mana.type, dims));
             }
-            case ARRAYLENGTH:       push(new ArrayLength(pop())); return null;
+            case ARRAYLENGTH:       return seqPush(new ArrayLength(pop()));
 
                 // Runtime Type information //////////////////////////////////////////////////////////////////////////////
 
-            case CHECKCAST:         push(new Cast(pop(), (Type.Ref)arg)); return null;
+            case CHECKCAST:         return seqPush(new Cast(pop(), (Type.Ref)arg));
             case INSTANCEOF:        push(new InstanceOf(pop(), (Type.Ref)arg)); return null;
 
             case LDC: case LDC_W: case LDC2_W: push(new Constant(arg)); return null;
