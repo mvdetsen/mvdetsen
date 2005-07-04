@@ -36,36 +36,6 @@ public class JSSA extends MethodGen implements CGConst {
             }
         }
     }
-
-    public void debugBodyToString(StringBuffer sb) {
-        StringBuffer sb0 = new StringBuffer();
-        super.debugBodyToString(sb0);
-        StringTokenizer st = new StringTokenizer(sb0.toString(), "\n");
-        String[] lines = new String[st.countTokens()];
-        for(int i=0; i<lines.length; i++) lines[i] = st.nextToken();
-        for(int j=0; j<ofs[0]; j++) {
-            String s = "    /* " + lines[j].trim();
-            while(s.length() < 50) s += " ";
-            s += " */";
-            sb.append(s);
-            sb.append("\n");
-        }
-        for(int i=0; i<numOps; i++) {
-            String s = "    /* " + lines[ofs[i]].trim();
-            while(s.length() < 50) s += " ";
-            s += " */  ";
-            s += ops[i].toString();
-            sb.append(s);
-            sb.append(";\n");
-            for(int j=ofs[i]+1; j<(i==numOps-1?size():ofs[i+1]); j++) {
-                s = "    /* " + lines[j].trim();
-                while(s.length() < 50) s += " ";
-                s += " */";
-                sb.append(s);
-                sb.append("\n");
-            }
-        }
-    }
     
     private Object[] ops = new Object[65535];
     private int[] ofs = new int[65535];
@@ -137,6 +107,9 @@ public class JSSA extends MethodGen implements CGConst {
         /** every JSSA.Expr either remembers its type _OR_ knows how to figure it out (the latter is preferred to eliminate
          *  redundant information that could possibly "disagree" with itself -- this happened a LOT in Soot) */
         public abstract Type getType();
+        
+        public final String toString() { return exprToString(this); }
+        public String _toString() { return super.toString(); } // Adam is going to hate me for this
     }
 
     /**
@@ -166,7 +139,7 @@ public class JSSA extends MethodGen implements CGConst {
         public final String name;
         public final Type t;
         public Argument(String name, Type t) { this.name = name; this.t = t; }
-        public String toString() { return name; }
+        public String _toString() { return name; }
         public Type getType() { return t; }
     }
     
@@ -178,7 +151,7 @@ public class JSSA extends MethodGen implements CGConst {
             this.e = e;
         }
         public Type getType() { return Type.BOOLEAN; }
-        public String toString() { return "!(" + e + ")"; }
+        public String _toString() { return "!(" + e + ")"; }
     }
     
     public class Neg extends Expr {
@@ -188,7 +161,7 @@ public class JSSA extends MethodGen implements CGConst {
             this.e = e;
         }
         public Type getType() { return e.getType(); }
-        public String toString() { return "- (" + e + ")"; }
+        public String _toString() { return "- (" + e + ")"; }
     }
     
     // Binary Operations //////////////////////////////////////////////////////////////////////////////
@@ -198,7 +171,7 @@ public class JSSA extends MethodGen implements CGConst {
         public final Expr e2;
         private final String show;
         public BinExpr(Expr e1, Expr e2, String show) { this.e1 = e1; this.e2 = e2; this.show = show; }
-        public String toString() {
+        public String _toString() {
             // FEATURE: should we be doing some precedence stuff here? probably no worth it for debugging output
             return "(" + e1 + show + e2 + ")";
         }
@@ -322,7 +295,7 @@ public class JSSA extends MethodGen implements CGConst {
         public final Type.Class t;
         public Type getType() { return t; }
         public New(Type.Class t) { this.t = t; }
-        public String toString() { return "new " + t + "(...)"; }
+        public String _toString() { return "new " + t + "()"; }
     }
     
     public class NewArray extends Expr {
@@ -347,7 +320,7 @@ public class JSSA extends MethodGen implements CGConst {
         public Type getType() { return f.getType(); }
         public Get(Type.Class.Field f) { this(f, null); }
         public Get(Type.Class.Field f, Expr e) { this.f = f; this.e = e; }
-        public String toString() {
+        public String _toString() {
             return
                 (e!=null
                  ? e+"."+f.name
@@ -406,7 +379,7 @@ public class JSSA extends MethodGen implements CGConst {
             sb.append(")");
         }
 
-        public String toString() {
+        public String _toString() {
             StringBuffer sb = new StringBuffer();
             sb.append(method.getDeclaringClass() == JSSA.this.method.getDeclaringClass()
                       ? method.name
@@ -418,14 +391,14 @@ public class JSSA extends MethodGen implements CGConst {
     public class InvokeStatic    extends Invoke  { public InvokeStatic(Type.Class.Method m, Expr[] a) { super(m,a); } }
     public class InvokeSpecial   extends InvokeVirtual {
         public InvokeSpecial(Type.Class.Method m, Expr[] a, Expr e) { super(m,a,e); }
-        public String toString() { return toString(method.name.equals("<init>") ? method.getDeclaringClass().getName() : method.name); }
+        public String _toString() { return _toString(method.name.equals("<init>") ? method.getDeclaringClass().getName() : method.name); }
     }
     public class InvokeInterface extends InvokeVirtual{public InvokeInterface(Type.Class.Method m, Expr[] a, Expr e){super(m,a,e);}}
     public class InvokeVirtual   extends Invoke  {
         public final Expr instance;
         public InvokeVirtual(Type.Class.Method m, Expr[] a, Expr e) { super(m, a); instance = e; }
-        public String toString() { return toString(method.name); }
-        protected String toString(String name) {
+        public String _toString() { return _toString(method.name); }
+        protected String _toString(String name) {
             StringBuffer sb = new StringBuffer();
             sb.append(instance+".");
             sb.append(name);
@@ -438,7 +411,7 @@ public class JSSA extends MethodGen implements CGConst {
         private final Object o;
         public Constant(int i) { this(new Integer(i)); }
         public Constant(Object o) { this.o = o; }
-        public String toString() { return o instanceof String ? "\"" + o + "\"" : o.toString(); }
+        public String _toString() { return o instanceof String ? "\"" + o + "\"" : o.toString(); }
         public Type getType() {
             if (o instanceof Byte) return Type.BYTE;
             if (o instanceof Short) return Type.SHORT;
@@ -651,6 +624,58 @@ public class JSSA extends MethodGen implements CGConst {
         }
     }
 
+    
+    public void debugBodyToString(StringBuffer sb) {
+        StringBuffer sb0 = new StringBuffer();
+        super.debugBodyToString(sb0);
+        StringTokenizer st = new StringTokenizer(sb0.toString(), "\n");
+        String[] lines = new String[st.countTokens()];
+        for(int i=0; i<lines.length; i++) lines[i] = st.nextToken();
+        for(int j=0; j<ofs[0]; j++) {
+            String s = "    /* " + lines[j].trim();
+             while(s.length() < 50) s += " ";
+             s += " */";
+             sb.append(s);
+             sb.append("\n");
+        }
+        
+        bindingMap = new IdentityHashMap();
+        nextVar = 0;
+        
+        for(int i=0; i<numOps; i++) {
+            String s = "    /* " + lines[ofs[i]].trim();
+             while(s.length() < 50) s += " ";
+             s += " */  ";
+             s += ops[i].toString();
+             sb.append(s);
+             sb.append(";\n");
+             for(int j=ofs[i]+1; j<(i==numOps-1?size():ofs[i+1]); j++) {
+                 s = "    /* " + lines[j].trim();
+                  while(s.length() < 50) s += " ";
+                  s += " */";
+                  sb.append(s);
+                  sb.append("\n");
+             }
+        }
+    }
+    
+    private Map bindingMap;
+    private int nextVar;
+    String exprToString(Expr e) {
+        if(e instanceof Constant) return e._toString();
+        String s = (String)bindingMap.get(e);
+        if(s != null) return s;
+        String prefix;
+        if(e.getType() == Type.VOID) return e._toString();
+        else if(e.getType() == Type.DOUBLE || e.getType() == Type.FLOAT) prefix = "f";
+        else if(e.getType().isPrimitive()) prefix = "i";
+        else if(e.getType().isArray()) prefix = "a";
+        else prefix = "o";
+        s = prefix + (nextVar++);
+        bindingMap.put(e,s);
+        return "(" + s + ":= " + e._toString() + ")";
+    }
+    
     public static void main(String[] args) throws Exception {
         InputStream is = Class.forName(args[0]).getClassLoader().getResourceAsStream(args[0].replace('.', '/')+".class");
         System.out.println(new ClassFile(new DataInputStream(is), true).toString());
