@@ -57,6 +57,7 @@ public abstract class Type implements CGConst {
     public static Type unify(Type t1, Type t2) {
         if(t1 == Type.NULL) return t2;
         if(t2 == Type.NULL) return t1;
+        if((t1 == Type.INT && t2 == Type.BOOLEAN) || (t2 == Type.INT & t1 == Type.BOOLEAN)) return Type.BOOLEAN;
         if(t1 == t2) return t1;
         // FIXME: This needs to do a lot more (subclasses, etc)
         // it probably should be in Context.java
