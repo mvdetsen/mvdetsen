@@ -465,8 +465,8 @@ public class JSSA extends MethodGen implements CGConst {
 
                 // Stack manipulations //////////////////////////////////////////////////////////////////////////////
 
-            case ACONST_NULL:                                                      return stack[sp++] = new Constant(null);
-            case ICONST_M1:                                                        return stack[sp++] = new Constant(-1);
+            case ACONST_NULL:                                                      push(new Constant(null)); return null;
+            case ICONST_M1:                                                        push(new Constant(-1)); return null;
             case ICONST_0: case LCONST_0: case FCONST_0: case DCONST_0:            push(new Constant(0)); return null;
             case ICONST_1: case LCONST_1: case FCONST_1: case DCONST_1:            push(new Constant(1)); return null;
             case ICONST_2: case FCONST_2:                                          push(new Constant(2)); return null;
