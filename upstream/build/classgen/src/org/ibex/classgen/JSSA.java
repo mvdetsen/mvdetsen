@@ -486,11 +486,11 @@ public class JSSA extends MethodGen implements CGConst {
             case ICONST_3:                                                         push(new Constant(3)); return null;
             case ICONST_4:                                                         push(new Constant(4)); return null;
             case ICONST_5:                                                         push(new Constant(5)); return null;
-            case ILOAD:    case LLOAD:    case FLOAD:    case DLOAD:    case ALOAD:    return push(local[i1]);
-            case ILOAD_0:  case LLOAD_0:  case FLOAD_0:  case DLOAD_0:  case ALOAD_0:  return push(local[0]);
-            case ILOAD_1:  case LLOAD_1:  case FLOAD_1:  case DLOAD_1:  case ALOAD_1:  return push(local[1]);
-            case ALOAD_2:  case DLOAD_2:  case FLOAD_2:  case LLOAD_2:  case ILOAD_2:  return push(local[2]);
-            case ILOAD_3:  case LLOAD_3:  case FLOAD_3:  case DLOAD_3:  case ALOAD_3:  return push(local[3]);
+            case ILOAD:    case LLOAD:    case FLOAD:    case DLOAD:    case ALOAD:    push(local[i1]); return null;
+            case ILOAD_0:  case LLOAD_0:  case FLOAD_0:  case DLOAD_0:  case ALOAD_0:  push(local[0]); return null;
+            case ILOAD_1:  case LLOAD_1:  case FLOAD_1:  case DLOAD_1:  case ALOAD_1:  push(local[1]); return null;
+            case ALOAD_2:  case DLOAD_2:  case FLOAD_2:  case LLOAD_2:  case ILOAD_2:  push(local[2]); return null;
+            case ILOAD_3:  case LLOAD_3:  case FLOAD_3:  case DLOAD_3:  case ALOAD_3:  push(local[3]); return null;
             case ISTORE:   case LSTORE:   case FSTORE:   case DSTORE:   case ASTORE:   local[i1] = pop(); return null;
             case ISTORE_0: case LSTORE_0: case FSTORE_0: case DSTORE_0: case ASTORE_0: local[0]  = pop(); return null;
             case ISTORE_1: case LSTORE_1: case FSTORE_1: case DSTORE_1: case ASTORE_1: local[1]  = pop(); return null;
@@ -628,8 +628,8 @@ public class JSSA extends MethodGen implements CGConst {
             case BIPUSH:    push(new Constant((Integer)arg)); return null;
             case SIPUSH:    push(new Constant((Integer)arg)); return null;
 
-            case TABLESWITCH:    new Branch((MethodGen.Switch)arg);
-            case LOOKUPSWITCH:   new Branch((MethodGen.Switch)arg);
+            case TABLESWITCH:    return new Branch((MethodGen.Switch)arg);
+            case LOOKUPSWITCH:   return new Branch((MethodGen.Switch)arg);
 
                 /*
             case MONITORENTER:   Op.monitorEnter(pop());
