@@ -625,8 +625,8 @@ public class JSSA extends MethodGen implements CGConst {
 
             case LDC: case LDC_W: case LDC2_W: push(new Constant(arg)); return null;
 
-            case BIPUSH:    push(new Constant(i1));  // FIXME return null;
-            case SIPUSH:    push(new Constant(i1));  // FIXME return null;
+            case BIPUSH:    push(new Constant((Integer)arg)); return null;
+            case SIPUSH:    push(new Constant((Integer)arg)); return null;
 
             case TABLESWITCH:    new Branch((MethodGen.Switch)arg);
             case LOOKUPSWITCH:   new Branch((MethodGen.Switch)arg);
