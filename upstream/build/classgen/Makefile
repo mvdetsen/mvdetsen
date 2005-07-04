@@ -10,7 +10,7 @@ $(classes): $(sources)
 	$(JAVAC) -d build $(sources)
 
 test: $(classes)
-	java -cp build:. org.ibex.classgen.JSSA Poop
+	javac Poop.java && java -cp build:. org.ibex.classgen.JSSA Poop
 
 clean: 
 	rm -rf build/*
