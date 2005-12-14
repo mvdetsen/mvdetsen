@@ -1,4 +1,4 @@
-JAVAC = javac
+JAVAC = javac -source 1.3 -target 1.3
 sources = $(shell find src -name '*.java')
 classes = $(sources:src/%.java=build/%.class)
 jar_classes = $(classes)
