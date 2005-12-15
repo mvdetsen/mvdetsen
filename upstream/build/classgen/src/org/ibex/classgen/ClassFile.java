@@ -93,7 +93,10 @@ public class ClassFile extends Type.Class.Body {
         @see CGConst
     */
     public final MethodGen addMethod(String name, Type ret, Type[] args, int flags) {
-        MethodGen mg = new MethodGen(getType().method(name, ret, args), flags);
+        return addMethod(getType().method(name, ret, args),flags);
+    }
+    public final MethodGen addMethod(Type.Class.Method method,int flags) {
+        MethodGen mg = new MethodGen(method, flags);
         methods.addElement(mg);
         return mg;
     }
@@ -108,8 +111,11 @@ public class ClassFile extends Type.Class.Body {
         @see FieldGen
         @see CGConst
         */  
-    public final Type.Class.Field.Body addField(Type.Class.Field field, int flags) {
-        FieldGen fg = new FieldGen(field, flags);
+    public final FieldGen addField(String name, Type type, int flags) {
+        return addField(getType().field(name,type),flags);
+    }
+    public final FieldGen addField(Type.Class.Field field, int flags) {
+        FieldGen fg = new FieldGen(field , flags);
         fields.addElement(fg);
         return fg;
     }

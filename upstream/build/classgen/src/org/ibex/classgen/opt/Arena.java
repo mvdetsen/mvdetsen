@@ -59,14 +59,14 @@ public class Arena implements CGConst {
         Type.Class.Method      arenaInit     = arenaInitBody.getMethod();
 
         Type.Class.Field            maxField = arena.field(getGladiatorName(c) + "$$max", Type.INT);
-        arenaBody.addField(maxField, PRIVATE);
+        /*arenaBody.addField(maxField, PRIVATE);*/
         /*
         assign(arenaInitBody, newIFR(arenaInitBody, maxField.makeRef()), IntConstant.v(initialSize),
                arenaInitBody.getFirstNonIdentityStmt());
         */
 
         Type.Class.Field sizeField = arena.field(getGladiatorName(c) + "$$size", Type.INT);
-        arenaBody.addField(sizeField, PRIVATE);
+        /*arenaBody.addField(sizeField, PRIVATE);*/
         /*
         assign(arenaInitBody, newIFR(arenaInitBody, sfr.makeRef()), IntConstant.v(0),
                arenaInitBody.getFirstNonIdentityStmt());
