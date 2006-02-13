@@ -189,6 +189,8 @@ public abstract class Type implements CGConst {
             public String getName() { return name; }
             public abstract String getTypeDescriptor();
             public abstract String toString();
+            public abstract int hashCode();
+            public abstract boolean equals(Object o);
         }
     
         public class Field extends Member {
@@ -203,6 +205,15 @@ public abstract class Type implements CGConst {
                     super(flags, attrs);
                     if ((flags & ~VALID_FIELD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
                 }
+            }
+            public int hashCode() {
+                return type.hashCode() ^ name.hashCode() ^ getDeclaringClass().hashCode();
+            }
+            public boolean equals(Object o_) {
+                if(o_ == this) return true;
+                if(!(o_ instanceof Field)) return false;
+                Field o = (Field) o_;
+                return o.getDeclaringClass() == getDeclaringClass() && o.type == type && o.name.equals(name);
             }
         }
 
@@ -278,6 +289,21 @@ public abstract class Type implements CGConst {
                         sb.append(";");
                     }
                 }
+            }
+            public int hashCode() {
+                int h = returnType.hashCode() ^ name.hashCode() ^ getDeclaringClass().hashCode();
+                for(int i=0;i<argTypes.length;i++) h ^= argTypes[i].hashCode();
+                return h;
+            }
+            public boolean equals(Object o_) {
+                if(o_ == this) return true;
+                if(!(o_ instanceof Method)) return false;
+                Method o = (Method) o_;
+                if(!(o.getDeclaringClass() == getDeclaringClass() && o.returnType == returnType && o.name.equals(name))) return false;
+                if(o.argTypes.length != argTypes.length) return false;
+                for(int i=0;i<argTypes.length;i++)
+                    if(o.argTypes[i] != argTypes[i]) return false;
+                return true;
             }
         }
     }
