@@ -1,8 +1,8 @@
-JAVAC = javac
+JAVAC = javac -source 1.3 -target 1.3
 sources = $(shell find src -name '*.java')
 classes = $(sources:src/%.java=build/%.class)
 
-bcel_jar = upstream/bcel-5.1/bcel-5.1.jar
+bcel_jar = upstream/bcel-5.2/bcel-5.2.jar
 
 TAR = $(shell test `uname` = SunOS && echo gtar || echo tar)
 
@@ -21,7 +21,7 @@ test: all Test.class
 
 $(bcel_jar):
 	mkdir -p upstream
-	curl http://mirrors.mix5.com/apache/jakarta/bcel/binaries/bcel-5.1.tar.gz | gzip -dc | $(TAR) -xf - -C upstream
+	curl http://apache.forbigweb.com/jakarta/bcel/binaries/bcel-5.2.tar.gz | gzip -dc | $(TAR) -xf - -C upstream
 
 clean: 
 	rm -rf build/*
