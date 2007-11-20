@@ -463,10 +463,10 @@ public class ClassFileCompiler extends Compiler implements CGConst  {
         boolean skipNext = true;
         boolean unreachable = false;
         
-        for(int i=0;i<count;i++,addr+=4) {
+        for(int i=0;i<count;i++,addr+=4,size-=4) {
             insn = skipNext ? dis.readInt() : nextInsn;
             nextInsn = (i == count-1) ? -1 : dis.readInt();
-            if(addr >= endOfMethod) { endMethod(addr,unreachable); startMethod(addr); }
+            if(addr >= endOfMethod) { endMethod(addr,unreachable); startMethod(addr,size); }
             if(insnTargets[i%maxInsnPerMethod] != null) {
                 insnTargets[i%maxInsnPerMethod].setTarget(mg.size());
                 unreachable = false;
@@ -485,15 +485,15 @@ public class ClassFileCompiler extends Compiler implements CGConst  {
                 warn.println("Exception at " + toHex(addr));
                 throw e;
             }
-            if(skipNext) { addr+=4; i++; }
+            if(skipNext) { addr+=4; size-=4; i++; }
         }
         endMethod(0,unreachable);
         dis.close();
     }
     
-    private void startMethod(int first) {
+    private void startMethod(int first, int size) {
         startOfMethod = first & methodMask;
-        endOfMethod = startOfMethod + maxBytesPerMethod;
+        endOfMethod = startOfMethod + Math.min(maxBytesPerMethod,size);
         
         mg = cg.addMethod("run_" + toHex(startOfMethod),Type.VOID,Type.NO_ARGS,PRIVATE|FINAL);
         if(onePage) {
