@@ -89,6 +89,12 @@ tasks/extract_darcs_%:
 	fi
 	touch $@
 
+tasks/extract_darcs_classgen:
+	touch $@
+
+tasks/extract_darcs_gcclass:
+	touch $@
+
 update_darcs_%: tasks/extract_darcs_%
 	if [ -d "build/$*/_darcs" ]; then \
 		cd "build/$*" && darcs pull; \

@@ -106,10 +106,6 @@ build/org/ibex/nestedvm/util/.Dummy.class:
 $(java_classes): build/org/ibex/nestedvm/util/.Dummy.class
 endif
 
-$(tasks)/build_darcs_classgen:
-	cd upstream/build/classgen && $(MAKE)
-	touch $@
-
 $(java_classes): $(java_sources) $(tasks)/build_darcs_classgen
 	$(JAVAC) -classpath "$(classpath)" -d build $(java_sources)
 
@@ -238,10 +234,6 @@ nestedvm.jar: $(java_classes) .manifest
 
 .gcclass_hints: $(java_sources)
 	sed -n 's/.*GCCLASS_HINT: \([^ ]*\) \([^ ]*\).*/hint:\1:\2/p' $(java_sources) > $@
-
-$(tasks)/build_darcs_gcclass:
-	cd upstream/build/gcclass && $(MAKE)
-	touch $@
 
 compact_runtime_compiler.jar: $(java_classes) .manifest $(tasks)/build_darcs_gcclass .gcclass_hints
 	mkdir -p tmp/pruned
