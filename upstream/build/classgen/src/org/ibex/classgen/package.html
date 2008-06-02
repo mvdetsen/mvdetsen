@@ -3,46 +3,46 @@ Example Usage:<br/>
 
 The following:<br/>
 <pre>
-        ClassGen cg = new ClassGen("Test1","java.lang.Object",ACC_PUBLIC|ACC_SUPER);
-        
-        FieldGen fg = cg.addField("message",Type.STRING,ACC_PRIVATE|ACC_STATIC);
-        fg.setConstantValue("Hello, World");
-        
-        MethodGen mg = cg.addMethod("main",Type.VOID,new Type[]{Type.arrayType(Type.STRING)},ACC_STATIC|ACC_PUBLIC);
-        mg.add(LDC,10);
-        mg.add(ISTORE_0);
-        
-        int top = mg.size();
-        mg.add(GETSTATIC,new FieldRef("java.lang.System","out",new Type.Object("java.io.PrintStream")));
-        mg.add(NEW,Type.STRINGBUFFER);
-        mg.add(DUP);
-        mg.add(INVOKESPECIAL,new MethodRef(Type.STRINGBUFFER,"<init>",Type.VOID,Type.NO_ARGS));
-        mg.add(GETSTATIC,new FieldRef("Test1","message",Type.STRING));
-        mg.add(INVOKEVIRTUAL,new MethodRef(Type.STRINGBUFFER,"append",Type.STRINGBUFFER,new Type[]{Type.STRING}));
-        mg.add(LDC," - ");
-        mg.add(INVOKEVIRTUAL,new MethodRef(Type.STRINGBUFFER,"append",Type.STRINGBUFFER,new Type[]{Type.STRING}));
-        mg.add(ILOAD_0);
-        mg.add(INVOKEVIRTUAL,new MethodRef(Type.STRINGBUFFER,"append",Type.STRINGBUFFER,new Type[]{Type.INT}));
-        
-        mg.add(ILOAD_0);
-        mg.add(ICONST_1);
-        mg.add(IAND);
-        int b1 = mg.add(IFNE);
-        mg.add(LDC,'!');
-        mg.add(INVOKEVIRTUAL,new MethodRef(Type.STRINGBUFFER,"append",Type.STRINGBUFFER,new Type[]{Type.CHAR}));
-        mg.setArg(b1,mg.size());
-        
-        mg.add(INVOKEVIRTUAL,new MethodRef(Type.STRINGBUFFER,"toString",Type.STRING,Type.NO_ARGS));
-        mg.add(INVOKEVIRTUAL,new MethodRef("java.io.PrintStream","println",Type.VOID,new Type[]{Type.STRING}));
-        
-        mg.add(IINC,new MethodGen.Pair(0,-1));
+ClassGen cg = new ClassGen("Test1","java.lang.Object",ACC_PUBLIC|ACC_SUPER);
 
-        mg.add(ILOAD_0);
-        mg.add(IFGT,top);
-        
-        mg.add(RETURN);
-        
-        cg.dump("Test1.class");
+FieldGen fg = cg.addField("message",Type.STRING,ACC_PRIVATE|ACC_STATIC);
+fg.setConstantValue("Hello, World");
+
+MethodGen mg = cg.addMethod("main",Type.VOID,new Type[]{Type.arrayType(Type.STRING)},ACC_STATIC|ACC_PUBLIC);
+mg.add(LDC,10);
+mg.add(ISTORE_0);
+
+int top = mg.size();
+mg.add(GETSTATIC,new FieldRef("java.lang.System","out",new Type.Object("java.io.PrintStream")));
+mg.add(NEW,Type.STRINGBUFFER);
+mg.add(DUP);
+mg.add(INVOKESPECIAL,new MethodRef(Type.STRINGBUFFER,"&lt;init&gt;",Type.VOID,Type.NO_ARGS));
+mg.add(GETSTATIC,new FieldRef("Test1","message",Type.STRING));
+mg.add(INVOKEVIRTUAL,new MethodRef(Type.STRINGBUFFER,"append",Type.STRINGBUFFER,new Type[]{Type.STRING}));
+mg.add(LDC," - ");
+mg.add(INVOKEVIRTUAL,new MethodRef(Type.STRINGBUFFER,"append",Type.STRINGBUFFER,new Type[]{Type.STRING}));
+mg.add(ILOAD_0);
+mg.add(INVOKEVIRTUAL,new MethodRef(Type.STRINGBUFFER,"append",Type.STRINGBUFFER,new Type[]{Type.INT}));
+
+mg.add(ILOAD_0);
+mg.add(ICONST_1);
+mg.add(IAND);
+int b1 = mg.add(IFNE);
+mg.add(LDC,'!');
+mg.add(INVOKEVIRTUAL,new MethodRef(Type.STRINGBUFFER,"append",Type.STRINGBUFFER,new Type[]{Type.CHAR}));
+mg.setArg(b1,mg.size());
+
+mg.add(INVOKEVIRTUAL,new MethodRef(Type.STRINGBUFFER,"toString",Type.STRING,Type.NO_ARGS));
+mg.add(INVOKEVIRTUAL,new MethodRef("java.io.PrintStream","println",Type.VOID,new Type[]{Type.STRING}));
+
+mg.add(IINC,new MethodGen.Pair(0,-1));
+
+mg.add(ILOAD_0);
+mg.add(IFGT,top);
+
+mg.add(RETURN);
+
+cg.dump("Test1.class");
 </pre>
 
 Will create this bytecode:
@@ -58,7 +58,7 @@ public static void main(java.lang.String[]);
    3:   getstatic       #10; //Field java/lang/System.out:Ljava/io/PrintStream;
    6:   new     #12; //class StringBuffer
    9:   dup
-   10:  invokespecial   #16; //Method java/lang/StringBuffer."<init>":()V
+   10:  invokespecial   #16; //Method java/lang/StringBuffer."&lt;init&gt;":()V
    13:  getstatic       #20; //Field message:Ljava/lang/String;
    16:  invokevirtual   #24; //Method java/lang/StringBuffer.append:(Ljava/lang/String;)Ljava/lang/StringBuffer;
    19:  ldc     #26; //String  - 
@@ -80,4 +80,19 @@ public static void main(java.lang.String[]);
 
 }
 </pre>
+
+Running Test1 will produce the following output:<br/>
+<pre>
+Hello, World - 10!
+Hello, World - 9
+Hello, World - 8!
+Hello, World - 7
+Hello, World - 6!
+Hello, World - 5
+Hello, World - 4!
+Hello, World - 3
+Hello, World - 2!
+Hello, World - 1
+</pre>
+
 </body>
