@@ -1,0 +1,106 @@
+--- ./gcc/config/mips/mips.c	2008-06-03 09:51:14.000000000 -0700
++++ ./gcc/config/mips/mips.c	2008-06-03 09:51:17.000000000 -0700
+@@ -5094,6 +5094,8 @@
+ 
+   mips_section_threshold = g_switch_set ? g_switch_value : MIPS_DEFAULT_GVALUE;
+ 
++  target_flags |= MASK_MEMCPY;
++
+   if (mips_section_threshold <= 0)
+     target_flags &= ~MASK_GPOPT;
+   else if (optimize)
+
+--- ./gcc/toplev.c	2008-06-03 08:14:23.000000000 -0700
++++ ./gcc/toplev.c	2008-06-03 08:41:32.000000000 -0700
+@@ -345,7 +345,7 @@
+    controlled by individual `flag_...' variables that are defaulted
+    based on this variable.  */
+ 
+-int optimize = 0;
++int optimize = 3;
+ 
+ /* Nonzero means optimize for size.  -Os.
+    The only valid values are zero and nonzero. When optimize_size is
+@@ -525,7 +525,7 @@
+ /* Nonzero forces all general induction variables in loops to be
+    strength reduced.  */
+ 
+-int flag_reduce_all_givs = 0;
++int flag_reduce_all_givs = 1;
+ 
+ /* Nonzero to perform full register move optimization passes.  This is the
+    default for -O2.  */
+@@ -551,11 +551,11 @@
+ /* Nonzero means place each function into its own section on those platforms
+    which support arbitrary section names and unlimited numbers of sections.  */
+ 
+-int flag_function_sections = 0;
++int flag_function_sections = 1;
+ 
+ /* ... and similar for data.  */
+ 
+-int flag_data_sections = 0;
++int flag_data_sections = 1;
+ 
+ /* Nonzero to inhibit use of define_optimization peephole opts.  */
+ 
+@@ -702,7 +702,8 @@
+ 
+ /* Nonzero means schedule into delayed branch slots if supported.  */
+ 
+-int flag_delayed_branch;
++int flag_delayed_branch = 0;
++int flag_dummy = 0;
+ 
+ /* Nonzero if we are compiling pure (sharable) code.
+    Value is 1 if we are doing "small" pic; value is 2 if we're doing
+@@ -897,7 +897,7 @@
+ int align_labels;
+ int align_labels_log;
+ int align_labels_max_skip;
+-int align_functions;
++int align_functions = 512;
+ int align_functions_log;
+ 
+ /* Like align_functions_log above, but used by front-ends to force the
+@@ -1065,7 +1065,7 @@
+    N_("Run the loop optimizer twice") },
+   {"delete-null-pointer-checks", &flag_delete_null_pointer_checks, 1,
+    N_("Delete useless null pointer checks") },
+-  {"schedule-insns", &flag_schedule_insns, 1,
++  {"schedule-insns", &flag_dummy, 1,
+    N_("Reschedule instructions before register allocation") },
+   {"schedule-insns2", &flag_schedule_insns_after_reload, 1,
+    N_("Reschedule instructions after register allocation") },
+@@ -1102,7 +1102,7 @@
+    N_("Reorder basic blocks to improve code placement") },
+   {"reorder-functions", &flag_reorder_functions, 1,
+    N_("Reorder functions to improve code placement") },
+-  {"rename-registers", &flag_rename_registers, 1,
++  {"rename-registers", &flag_dummy, 1,
+    N_("Do the register renaming optimization pass") },
+   {"cprop-registers", &flag_cprop_registers, 1,
+    N_("Do the register copy-propagation optimization pass") },
+@@ -4879,8 +4879,10 @@
+       flag_defer_pop = 1;
+       flag_thread_jumps = 1;
+ #ifdef DELAY_SLOTS
++#if 0
+       flag_delayed_branch = 1;
+ #endif
++#endif
+ #ifdef CAN_DEBUG_WITHOUT_FP
+       flag_omit_frame_pointer = 1;
+ #endif
+@@ -4906,9 +4908,11 @@
+       flag_force_mem = 1;
+       flag_peephole2 = 1;
+ #ifdef INSN_SCHEDULING
++#if 0
+       flag_schedule_insns = 1;
+       flag_schedule_insns_after_reload = 1;
+ #endif
++#endif
+       flag_regmove = 1;
+       flag_strict_aliasing = 1;
+       flag_delete_null_pointer_checks = 1;

@@ -1,0 +1,28 @@
+--- ld/ldmain.c	2008-06-03 08:54:26.000000000 -0700
++++ ld/ldmain.c	2008-06-03 09:05:00.000000000 -0700
+@@ -275,6 +275,7 @@
+   command_line.force_common_definition = FALSE;
+   command_line.inhibit_common_definition = FALSE;
+   command_line.interpreter = NULL;
++  command_line.gc_sections = TRUE;
+   command_line.rpath = NULL;
+   command_line.warn_mismatch = TRUE;
+   command_line.check_section_addresses = TRUE;
+@@ -293,7 +294,7 @@
+   link_info.shared = FALSE;
+   link_info.symbolic = FALSE;
+   link_info.export_dynamic = FALSE;
+-  link_info.static_link = FALSE;
++  link_info.static_link = TRUE;
+   link_info.traditional_format = FALSE;
+   link_info.optimize = FALSE;
+   link_info.no_undefined = FALSE;
+@@ -331,7 +332,7 @@
+   link_info.flags_1 = (bfd_vma) 0;
+   link_info.relax_finalizing = FALSE;
+ 
+-  ldfile_add_arch ("");
++  ldfile_add_arch ("mips1");
+ 
+   config.make_executable = TRUE;
+   force_make_executable = FALSE;
