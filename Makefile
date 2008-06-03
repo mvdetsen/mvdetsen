@@ -76,10 +76,16 @@ export PATH
 #
 # General Build Stuff
 #
-all: $(java_classes) $(tasks)/build_libc
+all: $(java_classes) $(tasks)/build_libc mvdetsen.jar
 ifdef NATIVE_MIPS2JAVA_COMPILER
 all: build/mips2java$(EXE_EXT) $(mips_objects)
 endif
+
+mvdetsen.jar: $(java_classes)
+	mkdir jarjunk
+	cp -a build/. upstream/build/classgen/build/. jarjunk/
+	echo 'Main-Class: org.ibex.nestedvm.Interpreter' > mymanifest
+	jar cvfm mvdetsen.jar mymanifest -C jarjunk/ .
 
 # HACK: Ensure libc is kept up to date when our mips_objects change
 $(tasks)/build_libc: $(mips_objects) $(tasks)/build_extraheaders
@@ -191,6 +197,8 @@ env.sh: Makefile $(tasks)/build_gcc $(tasks)/build_libc build/org/ibex/nestedvm/
 	@echo 'CXXFLAGS="$(mips_optflags)"; export CXXFLAGS' >> $@~
 	@echo 'LDFLAGS="$(MIPS_LDFLAGS)"; export LDFLAGS' >> $@~
 	@echo 'CLASSPATH=$(mips2java_root)/build:$(mips2java_root)/upstream/build/classgen/build:.; export CLASSPATH' >> $@~
+	@echo 'MVDETSEN_JSH=1; export MVDETSEN_JSH' >> $@~
+	@echo 'MVDETSEN_JAR=$(mips2java_root)/mvdetsen.jar; export MVDETSEN_JAR' >> $@~
 	@chmod a+x "$@~"
 	@mv "$@~" "$@"
 	@echo "$@ created successfully"
