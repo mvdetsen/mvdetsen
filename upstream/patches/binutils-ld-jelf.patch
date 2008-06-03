@@ -13,8 +13,8 @@
 +	char *buf = xmalloc (bsize);
 +	const char *default_mvdetsen_hdr = 
 +		"#!/bin/sh\n"
-+		"exec java -jar \"${MVDETSEN_JAR:-$0}\" \"${0#`pwd`}\" \"$@\"\n"
-+		"exit $?\n\n\n\n"
++		"exec java -jar \"${MVDETSEN_JAR:-$0}\" \"$0\" \"$@\"\n"
++		"exit $?\n"
 +	;
 +	char *bak_name = xmalloc (strlen (output_filename) + 5);
 +	strcpy (bak_name, output_filename);
