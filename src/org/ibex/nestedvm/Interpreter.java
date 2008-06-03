@@ -781,7 +781,7 @@ public class Interpreter extends UnixRuntime implements Cloneable {
         Interpreter emu = new Interpreter(image);
         java.lang.Runtime.getRuntime().addShutdownHook(new Thread(emu.new DebugShutdownHook()));
         int status = emu.run(argv);
-        System.err.println("Exit status: " + status);
+        //System.err.println("Exit status: " + status);
         System.exit(status);
     }
 }
