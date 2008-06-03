@@ -209,9 +209,33 @@ public class ELF {
         public boolean isBSS() { return name.equals(".bss") || name.equals(".sbss"); }
     }
     
+    private static class ElfSeeker extends Seekable {
+        int offset;
+        Seekable data;
+        public ElfSeeker(Seekable data) throws IOException {
+            this.data = data;
+            data.seek(0);
+            if (data.read() == '#' && data.read() == '!') {
+                while (data.read() != 0x7f)
+                    ;
+            }
+            offset = data.pos()-1;
+            data.seek(offset);
+        }
+
+        public int read(byte[] buf, int offset, int length) throws IOException { return data.read(buf,offset,length); }
+        public int write(byte[] buf, int offset, int length) throws IOException { data.write(buf,offset,length); return length; }
+        public void seek(int pos) throws IOException{ data.seek(pos + offset); }
+        public int pos()  throws IOException { return (int) data.pos() - offset; }
+        public int length() throws IOException { return (int)data.length() - offset; }
+        public void close() throws IOException { data.close(); }
+        public void resize(long length) throws IOException { data.resize(length + offset); }
+
+    }
+    
     public ELF(String file) throws IOException, ELFException { this(new Seekable.File(file,false)); }
     public ELF(Seekable data) throws IOException, ELFException {
-        this.data = data;
+        this.data = data = new ElfSeeker(data);
         ident = new ELFIdent();
         header = new ELFHeader();
         pheaders = new PHeader[header.phnum];
