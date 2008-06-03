@@ -1,0 +1,67 @@
+--- ./ld/ldmain.c	2008-06-02 22:39:40.000000000 -0700
++++ ./ld/ldmain.c	2008-06-02 23:36:15.000000000 -0700
+@@ -501,6 +501,64 @@
+       if (! bfd_close (output_bfd))
+ 	einfo (_("%F%B: final close failed: %E\n"), output_bfd);
+ 
++if (getenv("MVDETSEN_JSH"))
++if (!strcmp(TARGET, "mips-unknown-elf") || !strcmp(TARGET, "mips-mvdetsen-elf")) {
++	int i, l;
++	FILE *src, *dst;
++	char *piece_names[3];
++	const int bsize = 4096;
++	char *buf = xmalloc (bsize);
++	const char *default_mvdetsen_hdr = 
++		"#!/bin/sh\n"
++		"exec java -jar \"${MVDETSEN_JAR:-$0}\" \"${0#`pwd`}\" \"$@\"\n"
++		"exit $?\n\n\n\n"
++	;
++	char *bak_name = xmalloc (strlen (output_filename) + 5);
++	strcpy (bak_name, output_filename);
++	strcat (bak_name, ".bak");
++
++	src = fopen (output_filename, FOPEN_RB);
++	dst = fopen (bak_name, FOPEN_WB);
++	if (!src)
++		einfo (_("%X%P: unable to open for source of copy `%s'\n"), output_filename);
++	if (!dst)
++		einfo (_("%X%P: unable to open for destination of copy `%s'\n"), bak_name);
++	while ((l = fread (buf, 1, bsize, src)) > 0)
++		if (l != (int)fwrite (buf, 1, l, dst))
++			einfo (_("%P: Error writing file `%s'\n"), bak_name);
++	fclose (src);
++	if (fclose (dst) == EOF)
++		einfo (_("%P: Error closing file `%s'\n"), bak_name);
++	
++	dst = fopen (output_filename, FOPEN_WB);
++	if (!dst)
++		einfo (_("%X%P: unable to open for destination of jelf `%s'\n"), output_filename);
++
++	piece_names[0] = getenv("MVDETSEN_HDR");
++	piece_names[1] = bak_name;
++	piece_names[2] = getenv("MVDETSEN_JAR");
++	for (i = 0; i < 3; i++) {
++		char *piece_name = piece_names[i];
++		if (!piece_name) {
++			if (i == 0)
++				fputs(default_mvdetsen_hdr, dst);
++			continue;
++		}
++		src = fopen (piece_name, FOPEN_RB);
++		if (!src)
++			einfo (_("%X%P: unable to open for source of jelf `%s'\n"), piece_name);
++		while ((l = fread (buf, 1, bsize, src)) > 0)
++			if (l != (int)fwrite (buf, 1, l, dst))
++				einfo (_("%P: Error writing file `%s'\n"), piece_name);
++		fclose (src);
++	}
++	if (fclose (dst) == EOF)
++		einfo (_("%P: Error closing file `%s'\n"), output_filename);
++	unlink (bak_name);
++	free (bak_name);
++	free (buf);
++}
++
+       /* If the --force-exe-suffix is enabled, and we're making an
+ 	 executable file and it doesn't end in .exe, copy it to one
+ 	 which does.  */
