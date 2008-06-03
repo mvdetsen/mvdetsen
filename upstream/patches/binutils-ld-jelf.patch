@@ -1,6 +1,6 @@
 --- ./ld/ldmain.c	2008-06-02 22:39:40.000000000 -0700
 +++ ./ld/ldmain.c	2008-06-02 23:36:15.000000000 -0700
-@@ -501,6 +501,64 @@
+@@ -501,6 +501,70 @@
        if (! bfd_close (output_bfd))
  	einfo (_("%F%B: final close failed: %E\n"), output_bfd);
  
@@ -13,7 +13,13 @@
 +	char *buf = xmalloc (bsize);
 +	const char *default_mvdetsen_hdr = 
 +		"#!/bin/sh\n"
-+		"exec java -jar \"${MVDETSEN_JAR:-$0}\" \"$0\" \"$@\"\n"
++		"ELF=\"$0\"\n"
++		"JAR=\"${MVDETSEN_JAR:-$0}\"\n"
++		"if test -e /cygdrive/c ; then\n"
++		"  JAR=`cygpath -wsa \"$JAR\"`\n"
++		"  ELF=`cygpath -wsa \"$ELF\"`\n"
++		"fi\n"
++		"exec java -jar \"$JAR\" \"$ELF\" \"$@\"\n"
 +		"exit $?\n"
 +	;
 +	char *bak_name = xmalloc (strlen (output_filename) + 5);
