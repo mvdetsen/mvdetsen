@@ -90,9 +90,13 @@ tasks/extract_darcs_%:
 	touch $@
 
 tasks/extract_darcs_classgen:
+	rm -rf build/classgen
+	cp -a classgen build
 	touch $@
 
 tasks/extract_darcs_gcclass:
+	rm -rf build/gcclass
+	cp -a gcclass build
 	touch $@
 
 update_darcs_%: tasks/extract_darcs_%
