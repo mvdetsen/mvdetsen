@@ -18,7 +18,7 @@ configure_gpc = $(configure_gcc) --enable-languages="pascal"
 
 version_binutils = 2.14
 url_binutils = ftp://ftp.gnu.org/gnu/binutils/binutils-$(version_binutils).tar.gz
-patches_binutils = binutils-no64.patch binutils-nocompilein.patch
+patches_binutils = binutils-no64.patch binutils-nocompilein.patch binutils-ld-jelf.patch
 configure_binutils = --target=mips-unknown-elf
 
 version_newlib = 1.11.0
@@ -90,13 +90,15 @@ tasks/extract_darcs_%:
 	touch $@
 
 tasks/extract_darcs_classgen:
+	mkdir -p build
 	rm -rf build/classgen
-	cp -a classgen build
+	cp -a classgen build/
 	touch $@
 
 tasks/extract_darcs_gcclass:
+	mkdir -p build
 	rm -rf build/gcclass
-	cp -a gcclass build
+	cp -a gcclass build/
 	touch $@
 
 update_darcs_%: tasks/extract_darcs_%
