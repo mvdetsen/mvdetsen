@@ -8,7 +8,7 @@ url_gcc-g77 = http://mirrors.kernel.org/gnu/gcc/gcc-$(version_gcc)/gcc-g77-$(ver
 
 patches_gcc = gcc-fixes.patch gcc-fdata-sections-bss.patch gcc-64bitclean.patch gcc-3.3.6-fortran.patch gcc-cooked-in-cmdline-opts.patch
 
-configure_gcc = --target=mips-unknown-elf --disable-threads --with-gnu-ld --with-gnu-as --with-newlib=yes --enable-sjlj-exceptions --enable-languages="c"
+configure_gcc = --with-arch=mips1 --target=mips-unknown-elf --disable-threads --with-gnu-ld --with-gnu-as --with-newlib=yes --enable-sjlj-exceptions --enable-languages="c"
 configure_gcc_step2 = $(configure_gcc) --enable-languages="c,c++,f77"
 version_gpc = 20030830
 #url_gpc = http://www.gnu-pascal.de/alpha/gpc-$(version_gpc).tar.gz
@@ -19,7 +19,7 @@ configure_gpc = $(configure_gcc) --enable-languages="pascal"
 version_binutils = 2.14
 url_binutils = ftp://ftp.gnu.org/gnu/binutils/binutils-$(version_binutils).tar.gz
 patches_binutils = binutils-no64.patch binutils-nocompilein.patch binutils-ld-jelf.patch binutils-cooked-in-cmdline-opts.patch
-configure_binutils = --target=mips-unknown-elf
+configure_binutils = --with-arch=mips1 --target=mips-unknown-elf
 
 version_newlib = 1.11.0
 url_newlib = ftp://sources.redhat.com/pub/newlib/newlib-$(version_newlib).tar.gz
