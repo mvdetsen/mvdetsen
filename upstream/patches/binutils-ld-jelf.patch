@@ -4,7 +4,7 @@
        if (! bfd_close (output_bfd))
  	einfo (_("%F%B: final close failed: %E\n"), output_bfd);
  
-+if (getenv("MVDETSEN_JSH"))
++if (!getenv("MVDETSEN_OFF"))
 +if (!strcmp(TARGET, "mips-unknown-elf") || !strcmp(TARGET, "mips-mvdetsen-elf")) {
 +	int i, l;
 +	FILE *src, *dst;
