@@ -82,9 +82,10 @@ all: build/mips2java$(EXE_EXT) $(mips_objects)
 endif
 
 mvdetsen.jar: $(java_classes)
+	rm -rf jarjunk
 	mkdir jarjunk
 	cp -a build/. upstream/build/classgen/build/. jarjunk/
-	echo 'Main-Class: org.ibex.nestedvm.Interpreter' > mymanifest
+	echo 'Main-Class: org.ibex.nestedvm.RuntimeCompiler' > mymanifest
 	jar cvfm mvdetsen.jar mymanifest -C jarjunk/ .
 
 # HACK: Ensure libc is kept up to date when our mips_objects change

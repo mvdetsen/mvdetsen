@@ -1440,7 +1440,7 @@ public abstract class Runtime implements UsermodeConstants,Registers,Cloneable {
     }
     
     // CPU State
-    protected static class CPUState {
+    public static class CPUState {
         public CPUState() { /* noop */ }
         /* GPRs */
         public int[] r = new int[32];

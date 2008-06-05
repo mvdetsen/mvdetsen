@@ -209,16 +209,14 @@ public class ELF {
         public boolean isBSS() { return name.equals(".bss") || name.equals(".sbss"); }
     }
     
-    private static class ElfSeeker extends Seekable {
+    public static class ElfSeeker extends Seekable {
         int offset;
         Seekable data;
         public ElfSeeker(Seekable data) throws IOException {
             this.data = data;
             data.seek(0);
-            if (data.read() == '#' && data.read() == '!') {
-                while (data.read() != 0x7f)
-                    ;
-            }
+            if (data.read() == '#' && data.read() == '!')
+                try { while (data.read() != 0x7f) ; } catch (Exception e) { data.seek(1); }
             offset = data.pos()-1;
             data.seek(offset);
         }

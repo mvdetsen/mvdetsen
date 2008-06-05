@@ -101,7 +101,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
                 UnixRuntime prev = tasks[pid];
                 if(prev == null || prev == this || prev.pid != pid || prev.parent != parent)
                     throw new Error("should never happen");
-                synchronized(parent.children) {
+                if (parent!=null) synchronized(parent.children) {
                     int i = parent.activeChildren.indexOf(prev);
                     if(i == -1) throw new Error("should never happen");
                     parent.activeChildren.setElementAt(this,i);
@@ -461,6 +461,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
         byte[] buf = new byte[4096];
         
         try {
+            s = new ELF.ElfSeeker(s);
             int n = s.read(buf,0,buf.length);
             if(n == -1) throw new ErrnoException(ENOEXEC);
             
