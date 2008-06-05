@@ -73,7 +73,7 @@ public class ClassFile extends Type.Class.Body {
 
     public ClassFile(Type.Class thisType, Type.Class superType, int flags) { this(thisType, superType, flags, null); }
     public ClassFile(Type.Class thisType, Type.Class superType, int flags, Type.Class[] interfaces) {
-        thisType.super(flags, new AttrGen());
+        super(flags, new AttrGen());
         this.thisType = thisType;
         this.superType = superType;
         this.interfaces = interfaces;
@@ -222,7 +222,7 @@ public class ClassFile extends Type.Class.Body {
     }
     private ClassFile(int magic, short minor, short major, ConstantPool cp, short flags,
                       Type.Class thisType, DataInput i, boolean ssa) throws IOException {
-        thisType.super(flags, null);
+        super(flags, null);
         if (magic != 0xcafebabe) throw new ClassReadExn("invalid magic: " + Long.toString(0xffffffffL & magic, 16));
         this.minor = minor;
         this.major = major;
@@ -320,7 +320,7 @@ public class ClassFile extends Type.Class.Body {
             if (args[0].endsWith(".class")) {
                 System.out.println(new ClassFile(new DataInputStream(new FileInputStream(args[0]))).toString());
             } else {
-                InputStream is = Class.forName(args[0]).getClassLoader().getResourceAsStream(args[0].replace('.', '/')+".class");
+                InputStream is = java.lang.Class.forName(args[0]).getClassLoader().getResourceAsStream(args[0].replace('.', '/')+".class");
                 System.out.println(new ClassFile(new DataInputStream(is)).toString());
             }
         } else {

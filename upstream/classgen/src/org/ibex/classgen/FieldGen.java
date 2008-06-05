@@ -25,7 +25,7 @@ public class FieldGen extends Type.Class.Field.Body {
 
     private FieldGen(int flags, Type.Class.Field field, ClassFile.AttrGen attrs) { this(field, flags, attrs); }
     FieldGen(Type.Class.Field field, int flags) { this(field, flags, new ClassFile.AttrGen()); }
-    FieldGen(Type.Class.Field field, int flags, ClassFile.AttrGen attrs) { field.super(flags, attrs); }
+    FieldGen(Type.Class.Field field, int flags, ClassFile.AttrGen attrs) { super(flags, attrs, field); }
     
     /** Sets the ContantValue attribute for this field. 
         @param val The value to set this field to. Must be an Integer, Long, Float, Double, or String */

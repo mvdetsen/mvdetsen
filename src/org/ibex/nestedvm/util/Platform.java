@@ -85,7 +85,7 @@ public abstract class Platform {
         boolean _atomicCreateFile(File f) throws IOException {
             // This is not atomic, but its the best we can do on jdk 1.1
             if(f.exists()) return false;
-            new FileOutputStream(f).close();
+            new FileOutputStream(f.getAbsolutePath()).close();
             return true;
         }
         void _socketHalfClose(Socket s, boolean output) throws IOException {
@@ -115,7 +115,7 @@ public abstract class Platform {
         }
         
         RandomAccessFile _truncatedRandomAccessFile(File f, String mode) throws IOException {
-            new FileOutputStream(f).close();
+            new FileOutputStream(f.getAbsolutePath()).close();
             return new RandomAccessFile(f,mode);
         }
         

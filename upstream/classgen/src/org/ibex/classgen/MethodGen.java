@@ -28,7 +28,7 @@ public class MethodGen extends Type.Class.Method.Body {
     // Constructors //////////////////////////////////////////////////////////////////////////////
 
     MethodGen(Type.Class.Method method, int flags) {
-        method.super(flags, new ClassFile.AttrGen());
+        super(flags, new ClassFile.AttrGen(), method);
         this.method = method;
         codeAttrs = new ClassFile.AttrGen();
         if (!isConcrete()) size = capacity = -1;
@@ -42,7 +42,7 @@ public class MethodGen extends Type.Class.Method.Body {
         this(flags, name, c.method(name,cp.getUtf8KeyByIndex(in.readShort())), c, in, cp); }
     private MethodGen(short flags, String name, Type.Class.Method m,
                       Type.Class c, DataInput in, ConstantPool cp) throws IOException {
-        m.super(flags, new ClassFile.AttrGen(in,cp));
+        super(flags, new ClassFile.AttrGen(in,cp), m);
         this.method = m;
         
         if (isConcrete())  {

@@ -141,7 +141,7 @@ public abstract class Type implements CGConst {
         }
 
         public Type.Class.Body getBody(Context cx) { return cx.resolve(this.getName()); }
-        public abstract class Body extends HasAttributes {
+        public static abstract class Body extends HasAttributes {
             public abstract Type.Class.Method.Body[] methods();
             public abstract Type.Class.Field.Body[] fields();
             public Body(int flags, ClassFile.AttrGen attrs) {
@@ -151,10 +151,10 @@ public abstract class Type implements CGConst {
             }
         }
 
-        public Field field(String name, Type type) { return new Field(name, type); }
+        public Field field(String name, Type type) { return new Field(name, type, this); }
         public Field field(String name, String descriptor) { return field(name,Type.fromDescriptor(descriptor)); }
 
-        public Method method(String name, Type returnType, Type[] argTypes) { return new Method(name, returnType, argTypes); }
+        public Method method(String name, Type returnType, Type[] argTypes) { return new Method(name, returnType, argTypes, this); }
 
         /** see JVM Spec section 2.10.2 */
         public Method method(String name, String descriptor) {
@@ -182,10 +182,11 @@ public abstract class Type implements CGConst {
             return method(name, Type.fromDescriptor(retDesc), args);
         }
 
-        public abstract class Member {
+        public static abstract class Member {
             public final String name;
-            private Member(String name) { this.name = name; }
-            public Type.Class getDeclaringClass() { return Type.Class.this; }
+            public final Type.Class Type_Class_thiz;
+            public Member(String name, Type t, Type.Class Type_Class_thiz) { this.name = name; this.Type_Class_thiz = Type_Class_thiz; }
+            public Type.Class getDeclaringClass() { return Type_Class_thiz; }
             public String getName() { return name; }
             public abstract String getTypeDescriptor();
             public abstract String toString();
@@ -193,16 +194,17 @@ public abstract class Type implements CGConst {
             public abstract boolean equals(Object o);
         }
     
-        public class Field extends Member {
+        public static class Field extends Member {
             public final Type type;
-            private Field(String name, Type t) { super(name); this.type = t; }
+            private Field(String name, Type t, Type.Class Type_Class_thiz) { super(name, t, Type_Class_thiz); this.type = t; }
             public String getTypeDescriptor() { return type.getDescriptor(); }
             public Type getType() { return type; }
             public String toString() { return getDeclaringClass().toString()+"."+name+"["+type.toString()+"]"; }
-            public class Body extends HasAttributes {
-                public Field getField() { return Field.this; }
-                public Body(int flags, ClassFile.AttrGen attrs) {
-                    super(flags, attrs);
+            public static class Body extends HasAttributes {
+                Field Field_thiz;
+                public Field getField() { return Field_thiz; }
+                public Body(int flags, ClassFile.AttrGen attrs, Field Field_thiz) {
+                    super(flags, attrs); this.Field_thiz = Field_thiz;
                     if ((flags & ~VALID_FIELD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
                 }
             }
@@ -217,8 +219,9 @@ public abstract class Type implements CGConst {
             }
         }
 
-        public class Method extends Member {
+        public static class Method extends Member {
             final Type[] argTypes;
+            final Class Class_thiz;
             public final Type   returnType;
             public Type getReturnType()   { return returnType; }
             public int  getNumArgs()      { return argTypes.length; }
@@ -236,7 +239,7 @@ public abstract class Type implements CGConst {
                 if (name.equals("<clinit>")) sb.append("static ");
                 else {
                     if (name.equals("<init>"))
-                        sb.append(Class.this.getShortName());
+                        sb.append(Class_thiz.getShortName());
                     else
                         sb.append(returnType.toString()).append(" ").append(name);
                     sb.append("(");
@@ -246,8 +249,8 @@ public abstract class Type implements CGConst {
                 }
                 return sb.toString();
             }
-            private Method(String name, Type returnType, Type[] argTypes) {
-                super(name);
+            private Method(String name, Type returnType, Type[] argTypes, Class Class_thiz) {
+                super(name, returnType, Class_thiz); this.Class_thiz = Class_thiz;
                 this.argTypes = argTypes;
                 this.returnType = returnType;
             }
@@ -260,19 +263,20 @@ public abstract class Type implements CGConst {
                 sb.append(returnType.getDescriptor());
                 return sb.toString();
             }
-            public abstract class Body extends HasAttributes {
+            public static abstract class Body extends HasAttributes {
+                final Method Method_thiz;
                 public abstract java.util.Hashtable getThrownExceptions();
                 public abstract void debugBodyToString(StringBuffer sb);
-                public Method getMethod() { return Method.this; }
-                public Body(int flags, ClassFile.AttrGen attrs) {
-                    super(flags, attrs);
+                public Method getMethod() { return Method_thiz; }
+                public Body(int flags, ClassFile.AttrGen attrs, Method Method_thiz) {
+                    super(flags, attrs); this.Method_thiz = Method_thiz;
                     if ((flags & ~VALID_METHOD_FLAGS) != 0) throw new IllegalArgumentException("invalid flags");
                 }
                 public boolean isConcrete() { return !isAbstract() && !isNative() /*FIXME: !inAnInterface*/; }
                 public void toString(StringBuffer sb, String constructorName) {
                     int flags = getFlags();
                     sb.append("  ").append(ClassFile.flagsToString(flags,false));
-                    sb.append(Method.this.toString());
+                    sb.append(Method_thiz.toString());
                     java.util.Hashtable thrownExceptions = getThrownExceptions();
                     if (thrownExceptions.size() > 0) {
                         sb.append("throws");
