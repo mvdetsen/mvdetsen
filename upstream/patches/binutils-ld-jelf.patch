@@ -5,7 +5,7 @@
  	einfo (_("%F%B: final close failed: %E\n"), output_bfd);
  
 +if (getenv("MVDETSEN_OFF")==NULL)
-+if (!strcmp(TARGET, "mips-unknown-elf") || !strstr(TARGET, "mvdetsen") || !strstr(TARGET, "nestedvm")) {
++if (!strcmp(TARGET, "mips-unknown-elf") || strstr(TARGET, "mvdetsen") || strstr(TARGET, "nestedvm")) {
 +	int i, l;
 +	FILE *src, *dst;
 +	char *piece_names[3];
