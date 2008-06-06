@@ -1,15 +1,20 @@
+OLD_SHELL:=$(SHELL)
+SHELL=$(warning =================== **** [building [$@] because of [$?]] ==================== )$(OLD_SHELL) -x
+export OLD_SHELL
+export SHELL
+
 # Inspired by XWT's Makefile.upstream
 
 version_gcc = 3.3.6
 
 url_gcc-core = http://mirrors.kernel.org/gnu/gcc/gcc-$(version_gcc)/gcc-core-$(version_gcc).tar.gz
 url_gcc-c++ = http://mirrors.kernel.org/gnu/gcc/gcc-$(version_gcc)/gcc-g++-$(version_gcc).tar.gz
-url_gcc-g77 = http://mirrors.kernel.org/gnu/gcc/gcc-$(version_gcc)/gcc-g77-$(version_gcc).tar.gz
+#url_gcc-g77 = http://mirrors.kernel.org/gnu/gcc/gcc-$(version_gcc)/gcc-g77-$(version_gcc).tar.gz
 
-patches_gcc = gcc-fixes.patch gcc-fdata-sections-bss.patch gcc-64bitclean.patch gcc-3.3.6-fortran.patch gcc-cooked-in-cmdline-opts.patch
+patches_gcc = gcc-fixes.patch gcc-fdata-sections-bss.patch gcc-64bitclean.patch gcc-cooked-in-cmdline-opts.patch #gcc-3.3.6-fortran.patch 
 
 configure_gcc = --with-arch=mips1 --target=mips-unknown-elf --disable-threads --with-gnu-ld --with-gnu-as --with-newlib=yes --enable-sjlj-exceptions --enable-languages="c"
-configure_gcc_step2 = $(configure_gcc) --enable-languages="c,c++,f77"
+configure_gcc_step2 = $(configure_gcc) --enable-languages="c,c++" #,f77"
 version_gpc = 20030830
 #url_gpc = http://www.gnu-pascal.de/alpha/gpc-$(version_gpc).tar.gz
 url_gpc = http://www.megacz.com/upstream/gpc-$(version_gpc).tar.gz
@@ -62,17 +67,25 @@ tasks/build_newlib: tasks/build_gcc
 
 cross_root := $(usr)/mips-unknown-elf
 
+download := $(if $(DOWNLOAD_DIR),$(DOWNLOAD_DIR),$(upstream)/download)
+
 tasks/download_%:
 	if [ -z "$(url_$*)" ]; then echo "No url for $*" >&2; false; fi
-	mkdir -p download
-	cd download && curl -O $(url_$*)
+	mkdir -p $(download)
+	cd $(download) ; \
+	if [ ! -e $(notdir $(url_$*)) ] ; then \
+	  if ! curl -O $(url_$*) ; then \
+	    rm -f $(notdir $(url_$*)) ; \
+	    exit 1; \
+	  fi \
+	fi
 	touch $@
 
 tasks/extract_%: tasks/download_%
 	if [ -e $@ ]; then echo "Error: $@ exists. something isn't right"; false; else true; fi
 	mkdir -p build
 	cd build && \
-		gzip -dc  ../download/$*-$(version_$*).tar.gz | $(TAR) -xf - && \
+		gzip -dc  $(download)/$*-$(version_$*).tar.gz | $(TAR) -xf - && \
 		rm -f $* && \
 		ln -s $*-$(version_$*) $*
 	touch $@
@@ -147,15 +160,15 @@ clean_%:
 	rm -f "tasks/build_$*" "tasks/patch_$*" "tasks/extract_$*"
 
 
-tasks/download_gcc: tasks/download_gcc-core tasks/download_gcc-c++ tasks/download_gcc-g77
+tasks/download_gcc: tasks/download_gcc-core tasks/download_gcc-c++ #tasks/download_gcc-g77
 	touch $@
 
 tasks/extract_gcc: tasks/download_gcc
 	if [ -e $@ ]; then echo "Error: $@ exists. something isn't right"; false; else true; fi
 	mkdir -p build
-	cd build && gzip -dc ../download/gcc-core-$(version_gcc).tar.gz | $(TAR) -xf -
-	cd build && gzip -dc ../download/gcc-g++-$(version_gcc).tar.gz | $(TAR) -xf -
-	cd build && gzip -dc ../download/gcc-g77-$(version_gcc).tar.gz | $(TAR) -xf -
+	cd build && gzip -dc $(download)/gcc-core-$(version_gcc).tar.gz | $(TAR) -xf -
+	cd build && gzip -dc $(download)/gcc-g++-$(version_gcc).tar.gz | $(TAR) -xf -
+	#cd build && gzip -dc $(download)/gcc-g77-$(version_gcc).tar.gz | $(TAR) -xf -
 	touch $@
 
 tasks/patch_%: tasks/extract_%
@@ -194,8 +207,8 @@ tasks/extract_gpc: tasks/download_gcc tasks/download_gpc
 	if [ -e $@ ]; then echo "Error: $@ exists. something isn't right"; false; else true; fi
 	mkdir -p build/gpc.extract
 	cd build/gpc.extract && \
-		gzip -dc ../../download/gcc-core-$(version_gcc).tar.gz | $(TAR) -xf - && \
-		gzip -dc ../../download/gpc-$(version_gpc).tar.gz      | $(TAR) -xf - && \
+		gzip -dc $(download)/gcc-core-$(version_gcc).tar.gz | $(TAR) -xf - && \
+		gzip -dc $(download)/gpc-$(version_gpc).tar.gz      | $(TAR) -xf - && \
 		test ! -e gcc-$(version_gcc)/gcc/p && \
 		mv gpc-$(version_gpc)/p gcc-$(version_gcc)/gcc/p
 	mv build/gpc.extract/gcc-$(version_gcc) build/gpc-$(version_gpc)
@@ -217,7 +230,7 @@ tasks/build_gpc: tasks/patch_gpc tasks/build_libc
 
 tasks/build_openbsdglob: tasks/download_openbsdglob tasks/build_newlib
 	@mkdir -p $(usr)/mips-unknown-elf/{include,lib}
-	cd build && gzip -dc ../download/openbsdglob.tar.gz | $(TAR) -xf -
+	cd build && gzip -dc $(download)/openbsdglob.tar.gz | $(TAR) -xf -
 	cd build/openbsdglob && \
 		mips-unknown-elf-gcc '-Dissetugid()=0' -DARG_MAX=65536 $(MIPS_CFLAGS) -I. -c -o glob.o glob.c && \
 		mips-unknown-elf-gcc -O2 -Wall -Werror -I. -c -o fnmatch.o fnmatch.c && \
@@ -231,7 +244,7 @@ tasks/build_regex: tasks/download_regex tasks/build_newlib
 	@mkdir -p $(usr)/mips-unknown-elf/{include,lib}
 	mkdir -p build/regex build/regex/fake
 	cd build && \
-		tar xvzf ../download/regex3.8a.tar.gz && cd regex && \
+		tar xvzf $(download)/regex3.8a.tar.gz && cd regex && \
 		make CC=mips-unknown-elf-gcc CFLAGS="-I. $(MIPS_CFLAGS)" regcomp.o regexec.o regerror.o regfree.o && \
 		mips-unknown-elf-ar cr libregex.a regcomp.o regexec.o regerror.o regfree.o && \
 		mips-unknown-elf-ranlib libregex.a && \
@@ -283,7 +296,7 @@ patches_samba = samba.patch
 tasks/extract_libjpeg: tasks/download_libjpeg
 	mkdir -p build
 	cd build && \
-		gzip -dc ../download/jpegsrc.v$(version_libjpeg).tar.gz | $(TAR) -xf - && \
+		gzip -dc $(download)/jpegsrc.v$(version_libjpeg).tar.gz | $(TAR) -xf - && \
 		mv jpeg-$(version_libjpeg) libjpeg-$(version_libjpeg) && \
 		rm -f libjpeg && \
 		ln -s libjpeg-$(version_libjpeg)  libjpeg
@@ -302,7 +315,7 @@ tasks/build_libjpeg: tasks/patch_libjpeg tasks/build_libc
 tasks/extract_libmspack: tasks/download_libmspack tasks/build_libc
 	mkdir -p build
 	cd build && \
-		gzip -dc ../download/libmspack-$(version_libmspack).tar.gz | $(TAR) -xf - && \
+		gzip -dc $(download)/libmspack-$(version_libmspack).tar.gz | $(TAR) -xf - && \
 		mv libmspack libmspack-$(version_libmspack) && \
 		rm -f libmspack && \
 		ln -s libmspack-$(version_libmspack)  libmspack
@@ -330,7 +343,7 @@ tasks/extract_boehmgc: tasks/download_boehmgc
 	mkdir -p build
 	cd build && \
 		rm -rf gc$(version_boehmgc) && \
-		gzip -dc ../download/gc$(version_boehmgc).tar.gz | $(TAR) -xf - && \
+		gzip -dc $(download)/gc$(version_boehmgc).tar.gz | $(TAR) -xf - && \
 		rm -f boehmgc boehmgc-$(version_boehmgc) && \
 		ln -s gc$(version_boehmgc)  boehmgc && \
 		ln -s gc$(version_boehmgc)  boehmgc-$(version_boehmgc)
@@ -372,7 +385,7 @@ tasks/build_tex: tasks/build_tex_tangle tasks/build_gpc tasks/download_texinputs
 	rm -f build/tex/tex.p build/tex/tex.pool
 	cp misc/tex.ch build/tex/tex.ch
 	cd build/tex && \
-		$(TAR) xfz ../../download/texinputs-$(version_texinputs).tgz && \
+		$(TAR) xfz $(download)/texinputs-$(version_texinputs).tgz && \
 		java -cp $(root)/build:$(upstream)/build/classgen/build tests.Tangle \
 			--gpc-rts=-nPascalfile:tex.p    \
 			--gpc-rts=-npool:tex.pool       \
