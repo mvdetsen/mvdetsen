@@ -1048,6 +1048,11 @@ public abstract class Runtime implements UsermodeConstants,Registers,Cloneable {
         try {
             int n = _syscall(syscall,a,b,c,d,e,f);
             //if(n<0) throw new ErrnoException(-n);
+            if (STDERR_DIAG && n == -ENOSYS) {
+            	String fn = "?";
+            	try { fn = cstring(a); } catch (Exception x) { }
+            	System.err.println("WARNING: syscall "+syscall+" ENOSYS a='"+fn+"',"+a+", b="+b+", c="+c+", d="+d+", e="+e+", f="+f);
+            }
             return n;
         } catch(ErrnoException ex) {
             //System.err.println("While executing syscall: " + syscall + ":");
