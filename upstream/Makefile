@@ -1,20 +1,15 @@
-OLD_SHELL:=$(SHELL)
-SHELL=$(warning =================== **** [building [$@] because of [$?]] ==================== )$(OLD_SHELL) -x
-export OLD_SHELL
-export SHELL
-
 # Inspired by XWT's Makefile.upstream
 
 version_gcc = 3.3.6
 
 url_gcc-core = http://mirrors.kernel.org/gnu/gcc/gcc-$(version_gcc)/gcc-core-$(version_gcc).tar.gz
 url_gcc-c++ = http://mirrors.kernel.org/gnu/gcc/gcc-$(version_gcc)/gcc-g++-$(version_gcc).tar.gz
-#url_gcc-g77 = http://mirrors.kernel.org/gnu/gcc/gcc-$(version_gcc)/gcc-g77-$(version_gcc).tar.gz
+url_gcc-g77 = http://mirrors.kernel.org/gnu/gcc/gcc-$(version_gcc)/gcc-g77-$(version_gcc).tar.gz
 
-patches_gcc = gcc-fixes.patch gcc-fdata-sections-bss.patch gcc-64bitclean.patch gcc-cooked-in-cmdline-opts.patch #gcc-3.3.6-fortran.patch 
+patches_gcc = gcc-fixes.patch gcc-fdata-sections-bss.patch gcc-64bitclean.patch gcc-3.3.6-fortran.patch gcc-cooked-in-cmdline-opts.patch
 
 configure_gcc = --with-arch=mips1 --target=mips-unknown-elf --disable-threads --with-gnu-ld --with-gnu-as --with-newlib=yes --enable-sjlj-exceptions --enable-languages="c"
-configure_gcc_step2 = $(configure_gcc) --enable-languages="c,c++" #,f77"
+configure_gcc_step2 = $(configure_gcc) --enable-languages="c,c++,f77"
 version_gpc = 20030830
 #url_gpc = http://www.gnu-pascal.de/alpha/gpc-$(version_gpc).tar.gz
 url_gpc = http://www.megacz.com/upstream/gpc-$(version_gpc).tar.gz
@@ -168,7 +163,7 @@ tasks/extract_gcc: tasks/download_gcc
 	mkdir -p build
 	cd build && gzip -dc $(download)/gcc-core-$(version_gcc).tar.gz | $(TAR) -xf -
 	cd build && gzip -dc $(download)/gcc-g++-$(version_gcc).tar.gz | $(TAR) -xf -
-	#cd build && gzip -dc $(download)/gcc-g77-$(version_gcc).tar.gz | $(TAR) -xf -
+	cd build && gzip -dc $(download)/gcc-g77-$(version_gcc).tar.gz | $(TAR) -xf -
 	touch $@
 
 tasks/patch_%: tasks/extract_%
