@@ -123,6 +123,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
         switch(syscall) {
             case SYS_kill: return sys_kill(a,b);
             case SYS_fork: return sys_fork();
+            case SYS_vfork: return sys_vfork();
             case SYS_pipe: return sys_pipe(a);
             case SYS_dup2: return sys_dup2(a,b);
             case SYS_dup: return sys_dup(a);
@@ -320,6 +321,11 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
         r.children = null;
         r.activeChildren = r.exitedChildren = null;
         return r;
+    }
+
+    private int sys_vfork() {
+    	if(STDERR_DIAG) System.err.println("WARNING: sys_vfork called - emulating with sys_fork.");
+    	return sys_fork();
     }
 
     private int sys_fork() {
