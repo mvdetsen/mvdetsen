@@ -737,12 +737,14 @@ public class Interpreter extends UnixRuntime implements Cloneable {
         state.pc=pc;
     }
     
-    public Interpreter(Seekable data) throws IOException {
-        super(4096,65536);
+    public Interpreter(Seekable data) throws IOException { this(data,false); }
+    public Interpreter(Seekable data, boolean isExec) throws IOException {
+        super(4096,65536,isExec);
         loadImage(data);
     }
-    public Interpreter(String filename) throws IOException {
-        this(new Seekable.File(filename,false));
+    public Interpreter(String filename) throws IOException { this(filename,false); }
+    public Interpreter(String filename, boolean isExec) throws IOException {
+        this(new Seekable.File(filename,false), isExec);
         image = filename;
     }
     public Interpreter(InputStream is) throws IOException { this(new Seekable.InputStream(is)); }
@@ -780,7 +782,7 @@ public class Interpreter extends UnixRuntime implements Cloneable {
         String image = argv[0];
         Interpreter emu = new Interpreter(image);
         java.lang.Runtime.getRuntime().addShutdownHook(new Thread(emu.new DebugShutdownHook()));
-        int status = emu.run(argv);
+        int status = emu.runAndExec(emu, argv);
         //System.err.println("Exit status: " + status);
         System.exit(status);
     }

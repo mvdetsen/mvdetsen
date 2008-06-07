@@ -482,7 +482,16 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
                     if(STDERR_DIAG) System.err.println("Running RuntimeCompiler for " + path);
                     Class c = runtimeCompile(s,path);
                     if(STDERR_DIAG) System.err.println("RuntimeCompiler finished for " + path);
-                    if(c == null) throw new ErrnoException(ENOEXEC);
+                    if(c == null) {
+                        Interpreter ur = null;
+                        try {
+                            ur = new Interpreter(path,true);
+                        } catch (Exception e) {
+                            if (STDERR_DIAG) e.printStackTrace();
+                            throw new ErrnoException(ENOEXEC);
+                        }
+                        return exec(ur, argv, envp);
+                    }
                     gs.execCache.put(path,new GlobalState.CacheEnt(mtime,size,c));
                     return execClass(c,argv,envp);
                 case '#':
