@@ -155,7 +155,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
             case SYS_chown: return sys_chown(a,b,c);
             case SYS_lchown: return sys_chown(a,b,c);
             case SYS_fchown: return sys_fchown(a,b,c);
-            case SYS_chmod: return sys_chmod(a,b,c,d,e,f);
+            case SYS_chmod: return sys_chmod(a,b,c,d);
             case SYS_fchmod: return sys_fchmod(a,b,c);
             case SYS_umask: return sys_umask(a);
             
@@ -180,10 +180,20 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
     private int sys_fchown(int fd, int uid, int gid) {
         return 0;
     }
-    private int sys_chmod(int fileAddr, int b, int c, int d, int e, int f) {
-    	String fn = "?";
+
+    static Method setExecutable = null;
+    static {
+        try { setExecutable = java.io.File.class.getDeclaredMethod("setExecutable", new Class[]{boolean.class}); }
+        catch (NoSuchMethodException e) { }
+    }
+    private int sys_chmod(int fileAddr, int mode, int uid, int gid) {
+        String fn = null;
         try { fn = cstring(fileAddr); } catch (Exception x) { }
-        System.err.println("WARNING: sys_chmod fileAddr='"+fn+"',"+fileAddr+", b="+b+", c="+c+", d="+d+", e="+e+", f="+f);
+        if (STDERR_DIAG) System.err.println("WARNING: sys_chmod fileAddr='"+fn+"', mode="+mode+", uid="+uid+", gid="+gid);
+        if (fn!=null && setExecutable != null && 0!=(mode & 0111)) {
+            try { setExecutable.invoke(new File(fn), new Object[]{Boolean.TRUE}); }
+            catch (Exception e) { if (STDERR_DIAG) e.printStackTrace(); }
+        }
         return 0;
     }
     private int sys_fchmod(int fd, int uid, int gid) {
