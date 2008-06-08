@@ -1,25 +1,32 @@
 --- ./ld/ldmain.c	2008-06-02 22:39:40.000000000 -0700
 +++ ./ld/ldmain.c	2008-06-02 23:36:15.000000000 -0700
-@@ -501,6 +501,70 @@
+@@ -501,6 +501,89 @@
        if (! bfd_close (output_bfd))
  	einfo (_("%F%B: final close failed: %E\n"), output_bfd);
  
-+if (getenv("MVDETSEN_OFF")==NULL)
-+if (!strcmp(TARGET, "mips-unknown-elf") || strstr(TARGET, "mvdetsen") || strstr(TARGET, "nestedvm")) {
++if (getenv("NESTEDVM_LD_NO_JELF")==NULL)
++if (!strcmp(TARGET, "mips-unknown-elf") || strstr(TARGET, "nestedvm")) {
 +	int i, l;
 +	FILE *src, *dst;
-+	char *piece_names[3];
++	FILE *file_pieces[3];
 +	const int bsize = 4096;
++	char *hdrvar, *jarvar, *fn;
 +	char *buf = xmalloc (bsize);
-+	const char *default_mvdetsen_hdr = 
++	const char *default_nestedvm_hdr = 
 +		"#!/bin/sh\n"
++		"test -z ${NESTEDVM_HDR} \\\n"
++		"|| exec ${NESTEDVM_HDR} \"$@\"\n"
++		"RUT=${NESTEDVM_ROOT:-/}\n"
 +		"ELF=\"$0\"\n"
-+		"JAR=\"${MVDETSEN_JAR:-$0}\"\n"
++		"JAR=\"${NESTEDVM_JAR:-$0}\"\n"
++		"JAV=\"${REAL_JAVA:-java}\"\n"
 +		"if test -e /cygdrive/c ; then\n"
-+		"  JAR=`cygpath -wsa \"$JAR\"`\n"
-+		"  ELF=`cygpath -wsa \"$ELF\"`\n"
++		"  RUT=`cygpath -msa \"$RUT\"`\n"
++		"  JAR=`cygpath -msa \"$JAR\"`\n"
++		"  JAV=`cygpath -msa \"$JAV\"`\n"
++		"  ELF=`cygpath -msa \"${ELF%/*}\"`/${ELF##*/}\n"
 +		"fi\n"
-+		"exec java -jar \"$JAR\" \"$ELF\" \"$@\"\n"
++		"exec $JAV -Xmx768m -Dnestedvm.root=$RUT -jar \"$JAR\" \"$ELF\" \"$@\"\n"
 +		"exit $?\n"
 +	;
 +	char *bak_name = xmalloc (strlen (output_filename) + 5);
@@ -39,26 +46,38 @@
 +	if (fclose (dst) == EOF)
 +		einfo (_("%P: Error closing file `%s'\n"), bak_name);
 +	
-+	dst = fopen (output_filename, FOPEN_WB);
++	dst = fopen (output_filename, FOPEN_RUB);
 +	if (!dst)
 +		einfo (_("%X%P: unable to open for destination of jelf `%s'\n"), output_filename);
 +
-+	piece_names[0] = getenv("MVDETSEN_HDR");
-+	piece_names[1] = bak_name;
-+	piece_names[2] = getenv("MVDETSEN_JAR");
++	hdrvar = getenv("NESTEDVM_LD_HDR");
++	jarvar = getenv("NESTEDVM_LD_JAR");
++
++	file_pieces[0] = hdrvar ? fopen(hdrvar, FOPEN_RB) : NULL;
++	file_pieces[1] = fopen(bak_name, FOPEN_RB);
++	file_pieces[2] = jarvar ? fopen(jarvar, FOPEN_RB) : NULL;
++
++	for (i = 0, fn = "/"TARGET"/lib/nestedvm.hdr"; i < 3; i+=2, fn = "/"TARGET"/lib/nestedvm.jar") {
++		if (file_pieces[i] == NULL) {
++			char *dir = make_relative_prefix (program_name, BINDIR, TARGET_SYSTEM_ROOT);
++			char *ffn = xmalloc(strlen(dir) + strlen(fn));
++			sprintf(ffn, "%s%s", dir, fn);
++			file_pieces[i] = fopen(ffn, FOPEN_RB);
++			free(ffn);
++			free(dir);
++		}
++	}
++
 +	for (i = 0; i < 3; i++) {
-+		char *piece_name = piece_names[i];
-+		if (!piece_name) {
++		src = file_pieces[i];
++		if (!src) {
 +			if (i == 0)
-+				fputs(default_mvdetsen_hdr, dst);
++				fputs(default_nestedvm_hdr, dst);
 +			continue;
 +		}
-+		src = fopen (piece_name, FOPEN_RB);
-+		if (!src)
-+			einfo (_("%X%P: unable to open for source of jelf `%s'\n"), piece_name);
 +		while ((l = fread (buf, 1, bsize, src)) > 0)
 +			if (l != (int)fwrite (buf, 1, l, dst))
-+				einfo (_("%P: Error writing file `%s'\n"), piece_name);
++				einfo (_("%P: Error writing file `%s'\n"), output_filename);
 +		fclose (src);
 +	}
 +	if (fclose (dst) == EOF)
