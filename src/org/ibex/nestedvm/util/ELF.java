@@ -233,7 +233,7 @@ public class ELF {
     
     public ELF(String file) throws IOException, ELFException { this(new Seekable.File(file,false)); }
     public ELF(Seekable data) throws IOException, ELFException {
-        this.data = data = new ElfSeeker(data);
+        this.data = data = (data instanceof ElfSeeker) ? data : new ElfSeeker(data);
         ident = new ELFIdent();
         header = new ELFHeader();
         pheaders = new PHeader[header.phnum];

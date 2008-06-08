@@ -484,7 +484,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
                     if(c == null) {
                         Interpreter ur = null;
                         try {
-                            ur = new Interpreter(path,true);
+                            ur = new Interpreter(s,true);
                         } catch (Exception e) {
                             if (STDERR_DIAG) e.printStackTrace();
                             throw new ErrnoException(ENOEXEC);
