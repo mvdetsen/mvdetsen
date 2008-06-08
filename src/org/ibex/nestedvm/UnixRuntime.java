@@ -194,7 +194,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
     
     private int sys_access(int cstring, int mode) throws ErrnoException, ReadFaultException {
         // FEATURE: sys_access
-        return gs.stat(this,cstring(cstring)) == null ? -ENOENT : 0;
+        return gs.stat(this,normalizePath(cstring(cstring))) == null ? -ENOENT : 0;
     }
     
     private int sys_realpath(int inAddr, int outAddr) throws FaultException {
