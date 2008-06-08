@@ -155,7 +155,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
             case SYS_chown: return sys_chown(a,b,c);
             case SYS_lchown: return sys_chown(a,b,c);
             case SYS_fchown: return sys_fchown(a,b,c);
-            case SYS_chmod: return sys_chmod(a,b,c,d);
+            case SYS_chmod: return sys_chmod(a,b);
             case SYS_fchmod: return sys_fchmod(a,b,c);
             case SYS_umask: return sys_umask(a);
             
@@ -165,6 +165,11 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
     
     FD _open(String path, int flags, int mode) throws ErrnoException {
         return gs.open(this,normalizePath(path),flags,mode);
+    }
+    
+    private int sys_chmod(int fileAddr, int mode) throws ErrnoException, ReadFaultException {
+        gs.chmod(this,normalizePath(cstring(fileAddr)),mode);
+        return 0;
     }
     
     private int sys_getppid() {
@@ -178,22 +183,6 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
         return 0;
     }
     private int sys_fchown(int fd, int uid, int gid) {
-        return 0;
-    }
-
-    static Method setExecutable = null;
-    static {
-        try { setExecutable = java.io.File.class.getDeclaredMethod("setExecutable", new Class[]{boolean.class}); }
-        catch (NoSuchMethodException e) { }
-    }
-    private int sys_chmod(int fileAddr, int mode, int uid, int gid) {
-        String fn = null;
-        try { fn = cstring(fileAddr); } catch (Exception x) { }
-        if (STDERR_DIAG) System.err.println("WARNING: sys_chmod fileAddr='"+fn+"', mode="+mode+", uid="+uid+", gid="+gid);
-        if (fn!=null && setExecutable != null && 0!=(mode & 0111)) {
-            try { setExecutable.invoke(new File(fn), new Object[]{Boolean.TRUE}); }
-            catch (Exception e) { if (STDERR_DIAG) e.printStackTrace(); }
-        }
         return 0;
     }
     private int sys_fchmod(int fd, int uid, int gid) {
@@ -1339,6 +1328,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
         public final FStat lstat(UnixRuntime r, String path) throws ErrnoException { return (FStat) fsop(FS.LSTAT,r,path,0,0); }
         public final void mkdir(UnixRuntime r, String path, int mode) throws ErrnoException { fsop(FS.MKDIR,r,path,mode,0); }
         public final void unlink(UnixRuntime r, String path) throws ErrnoException { fsop(FS.UNLINK,r,path,0,0); }
+        public final void chmod(UnixRuntime r, String path, int mode) throws ErrnoException { fsop(FS.CHMOD,r,path,mode,0); }
         
         private static class CacheEnt {
             public final long time;
@@ -1354,6 +1344,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
         static final int LSTAT = 3;
         static final int MKDIR = 4;
         static final int UNLINK = 5;
+        static final int CHMOD = 6;
         
         GlobalState owner;
         int devno;
@@ -1365,6 +1356,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
                 case LSTAT: return lstat(r,path);
                 case MKDIR: mkdir(r,path,arg1); return null;
                 case UNLINK: unlink(r,path); return null;
+                case CHMOD: chmod(r,path,arg1); return null;
                 default: throw new Error("should never happen");
             }
         }
@@ -1377,6 +1369,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
         public abstract FStat stat(UnixRuntime r, String path) throws ErrnoException;
         public abstract void mkdir(UnixRuntime r, String path, int mode) throws ErrnoException;
         public abstract void unlink(UnixRuntime r, String path) throws ErrnoException;
+        public abstract void chmod(UnixRuntime r, String path, int mode) throws ErrnoException;
     }
         
     // chroot support should go in here if it is ever implemented
@@ -1506,6 +1499,22 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
             if(!f.mkdir()) throw new ErrnoException(EIO);            
         }
         
+        static Method setExecutable = null;
+        static {
+            try { setExecutable = java.io.File.class.getDeclaredMethod("setExecutable", new Class[]{boolean.class}); }
+            catch (NoSuchMethodException e) { }
+        }
+
+        public void chmod(UnixRuntime r, String path, int mode) throws ErrnoException {
+            File f = hostFile(path);
+            if(r.sm != null && !r.sm.allowWrite(f)) throw new ErrnoException(EACCES);
+            if(!f.exists()) throw new ErrnoException(ENOENT);
+            if (setExecutable != null && 0!=(mode & 0111)) {
+                try { setExecutable.invoke(f, new Object[]{Boolean.TRUE}); }
+                catch (Exception e) { if (STDERR_DIAG) e.printStackTrace(); }
+            }
+        }
+
         private static File getParentFile(File f) {
             String p = f.getParent();
             return p == null ? null : new File(p);
@@ -1709,6 +1718,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
         
         public void mkdir(UnixRuntime r, String path, int mode) throws ErrnoException { throw new ErrnoException(EROFS); }
         public void unlink(UnixRuntime r, String path) throws ErrnoException { throw new ErrnoException(EROFS); }
+        public void chmod(UnixRuntime r, String path, int mode) throws ErrnoException { throw new ErrnoException(EROFS); }
     }
     
     
@@ -1718,6 +1728,7 @@ public abstract class UnixRuntime extends Runtime implements Cloneable {
         public FStat lstat(UnixRuntime r, String path) throws ErrnoException { return stat(r,path); }
         public void mkdir(UnixRuntime r, String path, int mode) throws ErrnoException { throw new ErrnoException(EROFS); }
         public void unlink(UnixRuntime r, String path) throws ErrnoException { throw new ErrnoException(EROFS); }
+        public void chmod(UnixRuntime r, String path, int mode) throws ErrnoException { throw new ErrnoException(EROFS); }
         
         FStat connFStat(final URLConnection conn) {
             return new FStat() {
